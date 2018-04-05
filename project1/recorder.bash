@@ -21,8 +21,8 @@ while true; do
 			c=$(echo $line | cut -d " " -f6) # Command
 		fi
 
-		echo "$u;$p;$c;$s;$t" >> $filename
-	done <<< "$(ps --no-headers -eo "user:32 pid start time command" | tr -s " ")"
+		echo "$u;$p;$c;$s;$t"
+	done <<< "$(ps --no-headers -eo "user:32 pid start time command" | tr -s " ")" > $filename
 
 	echo Done! Waiting $PAUSE_FOR seconds until next execution
 	sleep $PAUSE_FOR
