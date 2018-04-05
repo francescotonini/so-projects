@@ -22,7 +22,7 @@ function menu {
 function startMonitor {
 	pid=$(pgrep -f "bash recorder.bash")
 	if [ $? -gt 0 ]; then
-		nohup bash recorder.bash >/dev/null 2>&1 &
+		bash recorder.bash >/dev/null 2>&1 &
 		echo "Monitoraggio avviato"
 	fi
 }
@@ -30,7 +30,8 @@ function startMonitor {
 function stopMonitor {
 	pid=$(pgrep -f "bash recorder.bash")
 	if [ $? -eq 0 ]; then
-		kill -13 $pid
+		kill -TERM $pid
+		wait $pid 2>/dev/null
 		echo "Monitoraggio terminato ($pid)"
 	fi
 }
