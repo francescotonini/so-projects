@@ -1,7 +1,14 @@
 #!/bin/bash
 THRESHOLD=64 # kbytes
 
-cd reports
+# Check if folder "reports" exists, otherwise exit
+if [ ! -d "reports" ]; then
+	echo Nessun report da rimuovere
+	exit 0
+fi
+
+# Cds into reports
+cd reports/
 
 if [ $(du -c report_*.csv | tail -n1 | cut -f1) -le $THRESHOLD ]; then
 	echo Niente da cancellare...
