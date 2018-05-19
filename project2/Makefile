@@ -5,6 +5,7 @@ BIN_DIR    := bin/
 SRC        := $(wildcard $(SRC_DIR)*.c)
 OBJ        := $(SRC:$(SRC_DIR)%.c=$(OBJ_DIR)%.o)
 LD         := gcc
+CFLAGS     := -I include/
 MKDIR      := mkdir -p
 
 $(OBJ_DIR)%.o: $(SRC_DIR)%.c
