@@ -15,13 +15,14 @@ $(OBJ_DIR)%.o: $(SRC_DIR)%.c
 
 $(PROJECT): $(OBJ)
 	@echo Linking $(PROJECT)
-	$(LD) $(LDFLAGS) $(OBJ) -o $(PROJECT)
+	@$(MKDIR) build
+	$(LD) $(LDFLAGS) $(OBJ) -o $(OBJ_DIR)$(PROJECT)
 
 all: $(PROJECT)
 
 install:
 	$(MKDIR) $(BIN_DIR)
-	cp $(PROJECT) $(BIN_DIR)
+	cp $(OBJ_DIR)$(PROJECT) $(BIN_DIR)
 
 doc:
 	@echo "Generating doc"
@@ -32,7 +33,11 @@ threads:
 	doxygen doxygen.cfg
 
 help:
-	@echo TODO
+	@echo all: compila il codice sorgente
+	@echo install: copia l'eseguibile su /bin
+	@echo doc: genera la documentazione
+	@echo threads: compila il codice usando le threads
+	@echo clean: rimuove i file temporanei di compilazione
 
 clean:
 	@echo Clean

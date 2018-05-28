@@ -5,78 +5,103 @@
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
+#include <sys/msg.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
 #include <tools.h>
 #include <figlio.h>
 #include <nipote.h>
 #include <types.h>
-#include <fcntl.h>
-#include <stdlib.h>
 #include <constants.h>
 
-struct Status* status;
+// Global variables
+struct Status *status;
+int semid;
 
-int figlio(int lines) {
-    // Attach signal
-    // signal(SIGUSR1, status_updated);
+void figlio(int lines, void *s1, unsigned *output) {
+    // Collego segnale
+    signal(SIGUSR1, status_updated);
 
-    // Create semaphore and set it to 1
-    int semid;
-    if ((semid = semget(SEM_KEY, 1, IPC_CREAT | 0666)) == -1) {
-        syserr("figlio", "impossibile creare il semaforo");
+    char *input = (char *)(s1 + sizeof(struct Status));
+
+    // Crea due semafori
+    if ((semid = semget(SEM_KEY, 2, IPC_CREAT | 0666)) < 0) {
+        syserr("figlio", "impossibile creare i semafori");
     }
-
-    struct sembuf *sops = (struct sembuf*) malloc(sizeof(struct sembuf));
+    struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
     sops->sem_num = 0;
     sops->sem_op = 1;
     sops->sem_flg = 0;
-
     if (semop(semid, sops, 1) == -1) {
         syserr("figlio", "impossibile impostare il semaforo a 1");
     }
-
-    // Get and attach to shared memory
-    int shmid;
-    if((shmid = shmget(SHKEY_S1, sizeof(struct Status), 0666)) < 0) {
-        syserr("figlio", "shmget");
+    sops->sem_num = 1;
+    sops->sem_op = 0;
+    sops->sem_flg = 0;
+    if (semop(semid, sops, 1) == -1) {
+        syserr("figlio", "impossibile impostare il semaforo a 0");
     }
 
-    void* shm;
-    if ((shm = shmat(shmid, NULL, 0)) == (void*) -1) {
-        syserr("figlio", "shmat");
+    status = (struct Status *)s1;
+
+    // Recupera coda logger
+    int queue_id;
+    if((queue_id = msgget(QUEUE_KEY, (IPC_CREAT | 0666))) == -1) {
+        syserr("figlio", "impossibile accedere  alla coda");
     }
+    int msg_size = sizeof(struct Message);
 
-    status = (struct Status*)shm;
-
-    // Create nephews
-    pid_t my_pid = getpid();
+    // Crea nipoti
     pid_t nephew1 = fork();
     if(nephew1 == -1) {
         syserr("figlio", "impossibile creare nipote");
     }
     else if(nephew1 == 0) {
-        return nipote(my_pid, 1, lines);
+        nipote(1, lines, s1, output);
     }
-
-    return 0;
 
     pid_t nephew2 = fork();
     if(nephew2 == -1) {
         syserr("figlio", "impossibile creare nipote");
     }
-    else if (nephew2 == 0) {
-        return nipote(my_pid, 2, lines);
+    else if(nephew2 == 0) {
+        nipote(2, lines, s1, output);
     }
 
     wait(&nephew1);
     wait(&nephew2);
 
-    return 0;
+    // Rimuove semafori
+    if (semctl(semid, 2, IPC_RMID) == -1) {
+        syserr("figlio", "impossibile rimuovere i semafori");
+    }
+
+    send_terminate(queue_id, msg_size);
+    exit(0);
 }
 
 void status_updated(int sig_num) {
-    println("Il nipote sta analizzando la stringa");
+    if (sig_num == SIGUSR1) {
+        char *grandson = itoa(status->grandson);
+        char *str1 = strcct("Il nipote ", grandson);
+        str1 = strcct(str1, " sta analizzando la ");
+        str1 = strcct(str1, itoa(status->id_string));
+        str1 = strcct(str1, "-esima stringa.");
+
+        println(str1);
+        free(grandson);
+        free(str1);
+        unlock(1);
+    }
 }
 
-void send_terminate() {
+void send_terminate(int queue_id, int msg_size) {
+    struct Message end_message;
+    end_message.mtype = 1;
+    strcp(end_message.text, "ricerca conclusa.");
 
+    if (msgsnd(queue_id, &end_message, msg_size, 0) == -1) {
+        syserr("figlio", "impossibile inviare messaggio di terminazione");
+    }
 }

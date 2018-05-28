@@ -6,9 +6,9 @@
 int main(int argc, char *argv[]) {
     if (argc != 3) {
         println("Usage: key_finder <input> <output>");
-        return 1;
+        exit(1);
     }
 
     // Here we go!
-    exit(padre(argv[1], argv[2]));
+    padre(argv[1], argv[2]);
 }

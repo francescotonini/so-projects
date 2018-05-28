@@ -2,89 +2,105 @@
 #include <sys/types.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
 #include <tools.h>
 #include <padre.h>
 #include <figlio.h>
+#include <logger.h>
 #include <types.h>
-#include <fcntl.h>
 #include <constants.h>
 
 // Global variables
 int shmid_s1;
 int shmid_s2;
-int input_fd;
 
-int padre(char* input, char* output) {
-    // Check if output file exists. If so, quit
-    if (access(output, F_OK) == 0) {
+void padre(char *input_path, char *output_path) {
+    // Controlla che il file di output esista. Se così fosse, arresta il processo
+    if (access(output_path, F_OK) == 0) {
         printerr("il file di output esiste");
-        return 1;
+        exit(1);
     }
 
-    // Check if input file exists. If not so, quit
-    if (access(input, F_OK | R_OK) != 0) {
-        syserr("padre", "errore file di input");
+    // Controlla che il file di input esista. Se così NON fosse, arresta il processo
+    if (access(input_path, F_OK | R_OK) != 0) {
+        syserr("padre", "errore nell'accedere file di input");
     }
 
-    // Count number of lines
-    if((input_fd = open(input, O_RDONLY, 0644)) == -1) {
-        syserr("padre", "impossibile aprire il file");
-    }
-
-    int lines = 0;
+    // Apre il file di input per contare il numero di righe nel file; infine, chiude il file
+    int input_fd;
+    int n_of_lines = 0;
     int n = 0;
     char buffer[BUFFER_SIZE];
+    if((input_fd = open(input_path, O_RDONLY, 0644)) == -1) {
+        syserr("padre", "impossibile aprire il file di input");
+    }
     while((n = read(input_fd, buffer, BUFFER_SIZE)) > 0) {
         for (int i = 0; i < n; i++) {
             if (buffer[i] == '\n') {
-                lines++;
+                n_of_lines++;
             }
         }
     }
+    if(close(input_fd) == -1) {
+        syserr("padre", "impossibile chiudere il file di input");
+    }
 
-    lseek(input_fd, 0, SEEK_SET);
-
-    void* s1 = attach_segments(SHKEY_S1, sizeof(struct Status) + (lines * 1030) + 1, IPC_CREAT | 0666);    
-    struct Status* status = (struct Status*)s1;
+    // Crea, collega il segmento di memoria s1 e imposta il campo id_string dell'enum Status a 0
+    void *s1 = attach_segments(SHKEY_S1, sizeof(struct Status) + (n_of_lines * 1030), IPC_CREAT | 0600);
+    struct Status *status = (struct Status *)s1;
+    char *input = (char *)(s1 + sizeof(struct Status));
     status->id_string = 0;
-    char* file = (char*)(s1 + sizeof(struct Status));
-    load_file(input, file);
 
-    char* s2 = (char*)attach_segments(SHKEY_S2, lines * 1030, IPC_CREAT | 0666);
+    // Crea e collega il segmento di memoria s2
+    unsigned *output = (unsigned *)attach_segments(SHKEY_S2, n_of_lines * sizeof(unsigned), IPC_CREAT | 0600);
 
-    // Create "figlio"
+    // Carica il file in input
+    load_file(input_path, input);
+
+    // Crea logger
+    pid_t pid_logger;
+    if ((pid_logger = fork()) == -1) {
+        syserr("padre", "impossibile creare logger");
+    }
+    else if (pid_logger == 0) {
+        logger();
+    }
+
+    // Crea figlio
     pid_t pid_figlio;
     if ((pid_figlio = fork()) == -1) {
         syserr("padre", "impossibile creare figlio");
     }
-
-    if (pid_figlio == 0) {
-        // Figlio!
-        return figlio(lines);
-    }
-    else {
-        // Padre
-        wait(&pid_figlio);
-
-        // check_keys()
-        save_keys(output, file);
-
-        detach_segments(shmid_s1, s1);
-        detach_segments(shmid_s2, s2);
+    else if (pid_figlio == 0) {
+        figlio(n_of_lines, s1, output);
     }
 
-    return 0;
+    // Attende i figli
+    wait(&pid_figlio);
+    wait(&pid_logger);
+
+    // Controlla le chiavi e salva
+    if (check_keys(input, output, n_of_lines) == 0) { 
+        save_keys(output_path, output, n_of_lines);
+    }
+
+    detach_segments(shmid_s1, status);
+    detach_segments(shmid_s2, output);
+
+    exit(0);
 }
 
-void* attach_segments(key_t key, size_t size, int flags) {
+void *attach_segments(key_t key, size_t size, int flags) {
     int shmid;
     if((shmid = shmget(key, size, flags)) < 0) {
-        syserr("padre", "shmget");
+        syserr("padre", "errore shmget");
     }
 
-    void* shm;
-    if ((shm = shmat(shmid, NULL, 0)) == (void*) -1) {
-        syserr("padre", "shmat");
+    void *shm;
+    if ((shm = shmat(shmid, NULL, 0)) == (void *) -1) {
+        syserr("padre", "errore shmat");
     }
 
     if (key == SHKEY_S1) {
@@ -97,19 +113,26 @@ void* attach_segments(key_t key, size_t size, int flags) {
     return shm;
 }
 
-void detach_segments(key_t key, char* attached_segment) {
+void detach_segments(key_t key, void *attached_segment) {
     shmdt(attached_segment);
     
     if (shmctl(key, IPC_RMID, NULL) == -1) {
-        syserr("padre", "shmctl");
+        syserr("padre", "errore shmctl");
     }
 }
 
 void load_file(char *name, char *segment) {
+    // Apre il file di input
+    int fd;
+    if((fd = open(name, O_RDONLY, 0644)) == -1) {
+        syserr("padre", "impossibile creare il file di input");
+    }
+
+    // Copia dal file di input nel segmento di memoria
     int n;
     int offset = 0;
     char buffer[BUFFER_SIZE];
-    while ((n = read(input_fd, buffer, BUFFER_SIZE)) > 0) {
+    while ((n = read(fd, buffer, BUFFER_SIZE)) > 0) {
         for (int i = 0, j = 0; i < n; i++, j++) {
             int index = offset + j;
 
@@ -121,38 +144,55 @@ void load_file(char *name, char *segment) {
         }
     }
 
-    segment[offset] = '\0';
-
-    if(close(input_fd) == -1) {
-        syserr("padre", "impossibile chiudere il file");
+    // Chiude il file di input
+    if(close(fd) == -1) {
+        syserr("padre", "impossibile chiudere il file di input");
     }
 }
 
-void save_keys(char *name, char *keys) {
+void save_keys(char *name, unsigned *keys, int n_of_lines) {
+    // Crea e apre il file di output
     int fd;
     if((fd = creat(name, O_RDWR ^ 0644)) == -1) {
-        syserr("padre", "impossibile creare il file");
+        syserr("padre", "impossibile creare il file di output");
     }
 
-    // Copy chars on buffer
-    int offset = 0;
-    char buffer[BUFFER_SIZE];
-    while (keys[offset] != '\0') {
-        int i;
-        for (i = 0; i < BUFFER_SIZE && keys[offset + i] != '\n'; i++) {
-            int index = i + offset;
-            buffer[i] = keys[index];
-        }
+    for (int i = 0; i < n_of_lines; i++) {
+        unsigned *this = (unsigned *)(keys + (i * sizeof(unsigned)));
+        char *converted = utoh(*this);
 
-        write(fd, buffer, i);
-        offset += 1030;
+        write(fd, "0x", 2);
+        write(fd, converted, 8);
+        write(fd, "\n", 1);
+
+        free(converted);
     }
 
+    // Chiude il file di output
     if(close(fd) == -1) {
-        syserr("padre", "impossibile chiudere il file");
+        syserr("padre", "impossibile chiudere il file di output");
     }
 }
 
-void check_keys(char *keys) {
+int check_keys(char *input, unsigned *output, int n_of_lines) {
+    for (int i = 0; i < n_of_lines; i++) {
+        // Find middle point of string
+        int middle_index = 0;
+        while ((input + (1030 * i))[middle_index] != ';') {
+            middle_index++;
+        }
 
+        void *base = (void *)(input + (1030 * i));
+
+        unsigned *clear = (unsigned *)(base + 1);
+        unsigned *encrypted = (unsigned *)(base + middle_index + 2);
+        unsigned *key = (unsigned *)(output + (i * sizeof(unsigned)));
+
+        if ((*clear ^ *key) != *encrypted) {
+            println("trovata una chiave non compatibile!");
+            return -1;
+        }
+    }
+
+    return 0;
 }

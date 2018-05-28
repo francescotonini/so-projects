@@ -5,103 +5,102 @@
 #include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/sem.h>
+#include <sys/msg.h>
+#include <time.h>
+#include <fcntl.h>
+#include <stdlib.h>
+
 #include <tools.h>
 #include <nipote.h>
 #include <types.h>
-#include <fcntl.h>
-#include <stdlib.h>
 #include <constants.h>
 
 int my_string;
 int semid;
-struct Status* status;
-char* input;
-char* output;
-int total_lines;
-pid_t parent_pid;
+struct Status *status;
 int id;
+int msg_size;
+int queue_id;
 
-int nipote(pid_t pid, int lines, int uid) {
-    parent_pid = pid;
-    total_lines = lines;
+void nipote(int uid, int lines, void *s1, unsigned *output) {
     id = uid;
 
     // Get semaphore
-    if ((semid = semget(SEM_KEY, 1, 0666)) == -1) {
+    if ((semid = semget(SEM_KEY, 2, 0666)) == -1) {
         syserr("nipote", "impossibile recuperare semaforo");
     }
 
-    // Get and attach to shared memory (s1)
-    int shmid_s1;
-    if((shmid_s1 = shmget(SHKEY_S1, sizeof(struct Status), 0666)) < 0) {
-        syserr("nipote", "shmget");
-    }
-    void* shm_s1;
-    if ((shm_s1 = shmat(shmid_s1, NULL, 0)) == (void*) -1) {
-        syserr("nipote", "shmat");
-    }
-    status = (struct Status*)shm_s1;
-    input = (char*)(shm_s1 + sizeof(struct Status));
+    status = (struct Status *)s1;
+    char *input = (char *)(s1 + sizeof(struct Status));
 
-    // Get and attach to shared memory (s1)
-    int shmid_s2;
-    if((shmid_s2 = shmget(SHKEY_S2, sizeof(struct Status), 0666)) < 0) {
-        syserr("nipote", "shmget");
+    // Get logger queue
+    if((queue_id = msgget(QUEUE_KEY, 0666)) == -1) {
+        syserr("nipote", "impossibile accedere alla coda");
     }
-    void* shm_s2;
-    if ((shm_s2 = shmat(shmid_s2, NULL, 0)) == (void*) -1) {
-        syserr("nipote", "shmat");
+    msg_size = sizeof(struct Message);
+
+    while(load_string(lines) == 0) {
+        unsigned key = find_key(input, output);
+        save_key(key, output);
     }
 
-    output = (char*)(shm_s2);
-
-    while(load_string() == 0) {
-        find_key();
-    }
-
-    shmdt(shm_s1);
-    shmdt(shm_s2);
+    exit(0);
 }
 
-int load_string() {
-    lock();
+int load_string(int lines) {
+    lock(0);
     my_string = status->id_string;
-    if (my_string == total_lines) {
-        unlock();
+    if (my_string == lines) {
+        unlock(0);
         return -1;
     }
 
-    status->id_string = my_string++;
+    status->id_string = my_string + 1;
     status->grandson = id;
-    kill(parent_pid, SIGUSR1);
 
-    unlock();
+    kill(getppid(), SIGUSR1);
+
+    lock(1);
+    unlock(0);
     return 0;
 }
 
-void lock() {
-    struct sembuf *sops = (struct sembuf*) malloc(sizeof(struct sembuf));
-    sops->sem_num = 0;
+void lock(int id) {
+    struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
+    sops->sem_num = id;
     sops->sem_op = -1;
     sops->sem_flg = 0;
 
     if (semop(semid, sops, 1) == -1) {
-        syserr("nipote", "unable to lock semaphore");
+        syserr("nipote", "impossibile bloccare il semaforo");
     }
+
+    free(sops);
 }
 
-void unlock() {
-    struct sembuf *sops = (struct sembuf*) malloc(sizeof(struct sembuf));
-    sops->sem_num = 0;
+void unlock(int id) {
+    struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
+    sops->sem_num = id;
     sops->sem_op = 1;
     sops->sem_flg = 0;
 
     if (semop(semid, sops, 1) == -1) {
-        syserr("nipote", "unable to unlock semaphore");
+        syserr("nipote", "impossibile sbloccare il semaforo");
     }
+
+    free(sops);
 }
 
-void find_key() {
+time_t current_timestamp() {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+
+    return ts.tv_sec;
+}
+
+unsigned find_key(char *input, unsigned *output) {
+    time_t start = current_timestamp();
+
     char *line = (char *)(input + (my_string * 1030));
     // Find "middle point"
     int middle_index = 0; 
@@ -109,25 +108,29 @@ void find_key() {
         middle_index++;
     }
 
-    char *clear = line;
-    char *encrypted = (char *)(line + middle_index);
+    unsigned *clear = (unsigned *)(line + 1);
+    unsigned *encrypted = (unsigned *)(line + middle_index + 2);
 
-    for (int i = 0; i < middle_index; i++) {
-        char key = (char)0;
-        while(clear[i] ^ key != encrypted[i]) {
-            key++;
-        }
-
-        output[(my_string * 512) + i] = key;
+    unsigned key = 0;
+    while ((*clear ^ key) != *encrypted) {
+        key++;
     }
 
-    output[(my_string * 512)] = '\0';
+    send_timeelapsed(current_timestamp() - start);
+    return key;
 }
 
-void send_timeelapsed() {
+void send_timeelapsed(time_t time) {
+    struct Message end_message;
+    end_message.mtype = 2;
+    strcp(end_message.text, strcct("chiave trovata in ", itoa(time)));
 
+    if (msgsnd(queue_id, &end_message, msg_size, 0) == -1) {
+        syserr("nipote", "impossibile inviare messaggio");
+    }
 }
 
-void save_key() {
-
+void save_key(unsigned key, unsigned *output) {
+    unsigned *pos = (unsigned *)(output + (my_string * sizeof(unsigned)));
+    *pos = key;
 }

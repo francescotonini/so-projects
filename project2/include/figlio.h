@@ -1,24 +1,26 @@
 /// @file
 
-/// @defgroup figlio
+/// @defgroup figlio struttura processo figlio
 /// @{
 
 /**
  * @brief wrapper del processo padre
  * @param lines numero di linee nel file
- * @return 0 is everything went fine, otherwise 1
+ * @param s1 indirizzo di memoria al segmento di memoria condivisa s1
+ * @param output indirizzo di memoria al segmento di memoria condivisa s2
  */
-int figlio(int lines);
+void figlio(int lines, void *s1, unsigned *output);
 
 /**
  * @brief wrapper del processo padre
- * @return 0 is everything went fine, otherwise 1
  */
 void status_updated(int sig_num);
 
 /**
  * @brief deposita il messaggio di terminazione nella coda di messaggi del processo logger
+ * @param queue_id identificativo coda
+ * @param msg_size dimensione messaggio
  */
-void send_terminate();
+void send_terminate(int queue_id, int msg_size);
 
 /// @}

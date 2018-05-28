@@ -1,18 +1,18 @@
 /// @file
 
-/// @defgroup nipote
+/// @defgroup nipote struttura processo nipote
 /// @{
 
 #include <sys/types.h>
 
 /**
  * @brief wrapper del processo padre
- * @param pid pid processo padre
- * @param lines numero righe nel file
  * @param uid id del nipote
- * @return 0 is everything went fine, otherwise 1
+ * @param lines numero righe nel file
+ * @param s1 indirizzo di memoria al segmento di memoria condivisa s1
+ * @param output indirizzo di memoria al segmento di memoria condivisa s2
  */
-int nipote(pid_t pid, int lines, int uid);
+void nipote(int uid, int lines, void *s1, unsigned *output);
 
 /**
  * @brief legge la stringa dal segmento S1
@@ -20,29 +20,34 @@ int nipote(pid_t pid, int lines, int uid);
  */
 int load_string();
 
-/*
+/**
  * @brief blocca l'accesso esclusivo regione critica
+ * @param id identificativo semaforo
  */
-void lock();
+void lock(int id);
 
-/*
+/**
  * @brief sblocca l'accesso esclusivo regione critica
+ * @param id identificativo semaforo
  */
-void unlock();
+void unlock(int id);
 
-/*
+/**
  * @brief trova la chiave
+ * @return chiave trovata
  */
-void find_key();
+unsigned find_key();
 
-/*
+/**
  * @brief deposita il messaggio "chiave trovata/secondi" nella coda di messagi del processo logger
  */
 void send_timeelapsed();
 
-/*
+/**
  * @brief salva la chiave nel segmento S2
+ * @param key chiave
+ * @param output puntatore sezione memoria condivisa
  */
-void save_key();
+void save_key(unsigned key, unsigned *output);
 
 /// @}
