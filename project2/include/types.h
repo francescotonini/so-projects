@@ -26,6 +26,16 @@ struct Message {
     char text[128];
 };
 
+/**
+ * @brief rappresenta ogni riga del file di input
+ */
+struct Entry {
+    /// @param clear parte chiara messaggio
+    unsigned clear;
+    /// @param encoded parte cifrata del messaggio
+    unsigned encoded;
+};
+
 #endif
 
 /// @}

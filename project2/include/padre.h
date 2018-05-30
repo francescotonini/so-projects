@@ -33,7 +33,7 @@ void detach_segments(key_t key, void *attached_segment);
  * @param name nome file
  * @param segment indirizzo alla posizione di memoria del segmento condiviso
  */
-void load_file(char *name, char *segment);
+struct Entry *load_file(char *name, void *ptr);
 
 /**
  * @brief salva le chiavi sul file di output
@@ -50,6 +50,6 @@ void save_keys(char *name, unsigned *keys, int n_of_lines);
  * @param n_of_lines numero di righe del file di input/output
  * @return 0 se tutte le chiavi sono state verificate correttamente; altrimenti -1
  */
-int check_keys(char *input, unsigned *output, int n_of_lines);
+int check_keys(struct Entry *input, unsigned *output, int n_of_lines);
 
 /// @}

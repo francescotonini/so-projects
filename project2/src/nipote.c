@@ -15,7 +15,6 @@
 #include <types.h>
 #include <constants.h>
 
-int my_string;
 int semid;
 struct Status *status;
 int id;
@@ -31,7 +30,7 @@ void nipote(int uid, int lines, void *s1, unsigned *output) {
     }
 
     status = (struct Status *)s1;
-    char *input = (char *)(s1 + sizeof(struct Status));
+    struct Entry *input = (struct Entry *)(s1 + sizeof(struct Status));
 
     // Get logger queue
     if((queue_id = msgget(QUEUE_KEY, 0666)) == -1) {
@@ -39,9 +38,10 @@ void nipote(int uid, int lines, void *s1, unsigned *output) {
     }
     msg_size = sizeof(struct Message);
 
-    while(load_string(lines) == 0) {
-        unsigned key = find_key(input, output);
-        save_key(key, output);
+    int my_string;
+    while((my_string = load_string(lines)) >= 0) {
+        unsigned key = find_key(my_string, input, output);
+        save_key(my_string, key, output);
     }
 
     exit(0);
@@ -49,7 +49,7 @@ void nipote(int uid, int lines, void *s1, unsigned *output) {
 
 int load_string(int lines) {
     lock(0);
-    my_string = status->id_string;
+    int my_string = status->id_string;
     if (my_string == lines) {
         unlock(0);
         return -1;
@@ -62,7 +62,7 @@ int load_string(int lines) {
 
     lock(1);
     unlock(0);
-    return 0;
+    return my_string;
 }
 
 void lock(int id) {
@@ -98,21 +98,14 @@ time_t current_timestamp() {
     return ts.tv_sec;
 }
 
-unsigned find_key(char *input, unsigned *output) {
+unsigned find_key(int my_string, struct Entry *input, unsigned *output) {
     time_t start = current_timestamp();
 
-    char *line = (char *)(input + (my_string * 1030));
-    // Find "middle point"
-    int middle_index = 0; 
-    while (line[middle_index] != ';') {
-        middle_index++;
-    }
-
-    unsigned *clear = (unsigned *)(line + 1);
-    unsigned *encrypted = (unsigned *)(line + middle_index + 2);
-
+    struct Entry *this_entry = (input + my_string);
+    unsigned clear = this_entry->clear;
+    unsigned encoded = this_entry->encoded;
     unsigned key = 0;
-    while ((*clear ^ key) != *encrypted) {
+    while ((clear ^ key) != encoded) {
         key++;
     }
 
@@ -130,7 +123,7 @@ void send_timeelapsed(time_t time) {
     }
 }
 
-void save_key(unsigned key, unsigned *output) {
-    unsigned *pos = (unsigned *)(output + (my_string * sizeof(unsigned)));
+void save_key(int my_string, unsigned key, unsigned *output) {
+    unsigned *pos = (output + my_string);
     *pos = key;
 }

@@ -23,8 +23,6 @@ void figlio(int lines, void *s1, unsigned *output) {
     // Collego segnale
     signal(SIGUSR1, status_updated);
 
-    char *input = (char *)(s1 + sizeof(struct Status));
-
     // Crea due semafori
     if ((semid = semget(SEM_KEY, 2, IPC_CREAT | 0666)) < 0) {
         syserr("figlio", "impossibile creare i semafori");

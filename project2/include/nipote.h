@@ -4,6 +4,7 @@
 /// @{
 
 #include <sys/types.h>
+#include <types.h>
 
 /**
  * @brief wrapper del processo padre
@@ -36,7 +37,7 @@ void unlock(int id);
  * @brief trova la chiave
  * @return chiave trovata
  */
-unsigned find_key();
+unsigned find_key(int my_string, struct Entry *input, unsigned *output);
 
 /**
  * @brief deposita il messaggio "chiave trovata/secondi" nella coda di messagi del processo logger
@@ -48,6 +49,6 @@ void send_timeelapsed();
  * @param key chiave
  * @param output puntatore sezione memoria condivisa
  */
-void save_key(unsigned key, unsigned *output);
+void save_key(int my_string, unsigned key, unsigned *output);
 
 /// @}

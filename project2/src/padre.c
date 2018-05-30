@@ -48,9 +48,9 @@ void padre(char *input_path, char *output_path) {
     }
 
     // Crea, collega il segmento di memoria s1 e imposta il campo id_string dell'enum Status a 0
-    void *s1 = attach_segments(SHKEY_S1, sizeof(struct Status) + (n_of_lines * 1030), IPC_CREAT | 0600);
+    void *s1 = attach_segments(SHKEY_S1, sizeof(struct Status) + (n_of_lines * sizeof(struct Entry)), IPC_CREAT | 0600);
     struct Status *status = (struct Status *)s1;
-    char *input = (char *)(s1 + sizeof(struct Status));
+    struct Entry *input = (struct Entry *)(s1 + sizeof(struct Status));
     status->id_string = 0;
 
     // Crea e collega il segmento di memoria s2
@@ -86,9 +86,6 @@ void padre(char *input_path, char *output_path) {
         save_keys(output_path, output, n_of_lines);
     }
 
-    detach_segments(shmid_s1, status);
-    detach_segments(shmid_s2, output);
-
     exit(0);
 }
 
@@ -121,26 +118,50 @@ void detach_segments(key_t key, void *attached_segment) {
     }
 }
 
-void load_file(char *name, char *segment) {
+struct Entry *load_file(char *name, void *ptr) {
+    struct Entry *segment = (struct Entry *)ptr;
+
     // Apre il file di input
     int fd;
     if((fd = open(name, O_RDONLY, 0644)) == -1) {
         syserr("padre", "impossibile creare il file di input");
     }
 
-    // Copia dal file di input nel segmento di memoria
     int n;
     int offset = 0;
     char buffer[BUFFER_SIZE];
-    while ((n = read(fd, buffer, BUFFER_SIZE)) > 0) {
-        for (int i = 0, j = 0; i < n; i++, j++) {
-            int index = offset + j;
+    struct Entry *current_entry = segment;
+    int current_pos = 1;
+    int current_entry_status = 0;
 
-            segment[index] = buffer[i];
-            if (buffer[i] == '\n') {
-                offset += 1030;
-                j = -1;
+    // Salto il primo carattere (non utile ai fini del caricamento nel file)
+    lseek(fd, current_pos, SEEK_SET);
+    while ((n = read(fd, buffer, BUFFER_SIZE)) > 0) {
+        if (current_entry_status == 0) {
+            current_entry->clear = *((unsigned *)&buffer);
+            current_entry_status = 1;
+
+            // Cerca ; e passa a quel punto
+            for (int i = 0; i < n; i++, current_pos++) {
+                if (buffer[i] == '<') {
+                    i = n;
+                }
             }
+            lseek(fd, current_pos, SEEK_SET);
+        }
+        else if (current_entry_status == 1) {
+            current_entry->encoded = *((unsigned *)&buffer);
+            current_entry_status = 0;
+
+            // Cerca \n e passa a quel punto
+            for (int i = 0; i < n; i++, current_pos++) {
+                if (buffer[i] == '\n') {
+                    i = n;
+                }
+            }
+            lseek(fd, ++current_pos, SEEK_SET);
+
+            current_entry++;
         }
     }
 
@@ -148,6 +169,8 @@ void load_file(char *name, char *segment) {
     if(close(fd) == -1) {
         syserr("padre", "impossibile chiudere il file di input");
     }
+
+    return segment;
 }
 
 void save_keys(char *name, unsigned *keys, int n_of_lines) {
@@ -158,7 +181,7 @@ void save_keys(char *name, unsigned *keys, int n_of_lines) {
     }
 
     for (int i = 0; i < n_of_lines; i++) {
-        unsigned *this = (unsigned *)(keys + (i * sizeof(unsigned)));
+        unsigned *this = (keys + i);
         char *converted = utoh(*this);
 
         write(fd, "0x", 2);
@@ -174,21 +197,12 @@ void save_keys(char *name, unsigned *keys, int n_of_lines) {
     }
 }
 
-int check_keys(char *input, unsigned *output, int n_of_lines) {
-    for (int i = 0; i < n_of_lines; i++) {
-        // Find middle point of string
-        int middle_index = 0;
-        while ((input + (1030 * i))[middle_index] != ';') {
-            middle_index++;
-        }
+int check_keys(struct Entry *input, unsigned *output, int n_of_lines) {
+    struct Entry *this_entry = input;
+    for (int i = 0; i < n_of_lines; i++, this_entry++) {
+        unsigned *key = (output + i);
 
-        void *base = (void *)(input + (1030 * i));
-
-        unsigned *clear = (unsigned *)(base + 1);
-        unsigned *encrypted = (unsigned *)(base + middle_index + 2);
-        unsigned *key = (unsigned *)(output + (i * sizeof(unsigned)));
-
-        if ((*clear ^ *key) != *encrypted) {
+        if ((this_entry->clear ^ *key) != this_entry->encoded) {
             println("trovata una chiave non compatibile!");
             return -1;
         }
