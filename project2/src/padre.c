@@ -146,6 +146,9 @@ struct Entry *load_file(char *name, void *ptr) {
                 if (buffer[i] == '<') {
                     i = n;
                 }
+                else if (i == n - 1) {
+                    current_pos += 3;
+                }
             }
             lseek(fd, current_pos, SEEK_SET);
         }
@@ -157,6 +160,9 @@ struct Entry *load_file(char *name, void *ptr) {
             for (int i = 0; i < n; i++, current_pos++) {
                 if (buffer[i] == '\n') {
                     i = n;
+                }
+                else if (i == n - 1) {
+                    current_pos += 3;
                 }
             }
             lseek(fd, ++current_pos, SEEK_SET);
