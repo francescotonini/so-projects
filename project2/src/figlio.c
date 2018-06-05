@@ -17,27 +17,27 @@
 
 // Global variables
 struct Status *status;
-int semid;
+int sem_id;
 
 void figlio(int lines, void *s1, unsigned *output) {
     // Collego segnale
     signal(SIGUSR1, status_updated);
 
     // Crea due semafori
-    if ((semid = semget(SEM_KEY, 2, IPC_CREAT | 0666)) < 0) {
+    if ((sem_id = semget(SEM_KEY, 2, IPC_CREAT | 0666)) < 0) {
         syserr("figlio", "impossibile creare i semafori");
     }
     struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
     sops->sem_num = 0;
     sops->sem_op = 1;
     sops->sem_flg = 0;
-    if (semop(semid, sops, 1) == -1) {
+    if (semop(sem_id, sops, 1) == -1) {
         syserr("figlio", "impossibile impostare il semaforo a 1");
     }
     sops->sem_num = 1;
     sops->sem_op = 0;
     sops->sem_flg = 0;
-    if (semop(semid, sops, 1) == -1) {
+    if (semop(sem_id, sops, 1) == -1) {
         syserr("figlio", "impossibile impostare il semaforo a 0");
     }
 
@@ -71,7 +71,7 @@ void figlio(int lines, void *s1, unsigned *output) {
     wait(&nephew2);
 
     // Rimuove semafori
-    if (semctl(semid, 2, IPC_RMID) == -1) {
+    if (semctl(sem_id, 2, IPC_RMID) == -1) {
         syserr("figlio", "impossibile rimuovere i semafori");
     }
 

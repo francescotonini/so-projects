@@ -15,7 +15,7 @@
 #include <types.h>
 #include <constants.h>
 
-int semid;
+int sem_id;
 struct Status *status;
 int id;
 int msg_size;
@@ -25,7 +25,7 @@ void nipote(int uid, int lines, void *s1, unsigned *output) {
     id = uid;
 
     // Get semaphore
-    if ((semid = semget(SEM_KEY, 2, 0666)) == -1) {
+    if ((sem_id = semget(SEM_KEY, 2, 0666)) == -1) {
         syserr("nipote", "impossibile recuperare semaforo");
     }
 
@@ -71,7 +71,7 @@ void lock(int id) {
     sops->sem_op = -1;
     sops->sem_flg = 0;
 
-    if (semop(semid, sops, 1) == -1) {
+    if (semop(sem_id, sops, 1) == -1) {
         syserr("nipote", "impossibile bloccare il semaforo");
     }
 
@@ -84,7 +84,7 @@ void unlock(int id) {
     sops->sem_op = 1;
     sops->sem_flg = 0;
 
-    if (semop(semid, sops, 1) == -1) {
+    if (semop(sem_id, sops, 1) == -1) {
         syserr("nipote", "impossibile sbloccare il semaforo");
     }
 
