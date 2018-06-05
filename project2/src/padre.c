@@ -86,6 +86,9 @@ void padre(char *input_path, char *output_path) {
         save_keys(output_path, output, n_of_lines);
     }
 
+    detach_segments(shmid_s1, s1);
+    detach_segments(shmid_s2, output);
+
     exit(0);
 }
 

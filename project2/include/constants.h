@@ -43,7 +43,7 @@
 /**
  * @brief numero di thread
  */
-#define NUM_THREADS 20
+#define NUM_THREADS 4
 #endif
 #endif
 

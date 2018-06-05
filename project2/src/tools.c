@@ -1,8 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include "tools.h"
 #include <unistd.h>
+
+#include "tools.h"
 
 void syserr(char *prog, char *msg)
 {
@@ -12,16 +13,17 @@ void syserr(char *prog, char *msg)
 }
 
 void println(char *str) {
-    int nOfChar = strsize(str);
-    write(STDOUT, str, nOfChar);
-    write(STDOUT, "\n", 1);
+    char *strWithNewline = strcct(str, "\n");
+    write(STDOUT, strWithNewline, strsize(strWithNewline));
+
+    free(strWithNewline);
 }
 
 void printerr(char *str) {
-    int nOfChar = 0;
-    for (int i = 0; str[i] != '\0'; i++, nOfChar++);
-    write(STDERR, str, nOfChar);
-    write(STDERR, "\n", 1);
+    char *strWithNewline = strcct(str, "\n");
+    write(STDERR, strWithNewline, strsize(strWithNewline));
+
+    free(strWithNewline);
 }
 
 int strsize(char *str) {
@@ -86,8 +88,7 @@ char *utoh(unsigned value) {
 
     char *new_string = (char *)malloc(sizeof(char) * 8);
 
-    int i = 0;
-    for(i = digits - 1; i >= 0; i--){
+    for(int i = 7; i >= 0; i--){
         if((value % 16) <= 9){
             new_string[i] = (char) (value % 16) + '0';
         }
@@ -97,5 +98,5 @@ char *utoh(unsigned value) {
         value = value/16;
     }
 
-    return new_string; 
+    return new_string;
 }

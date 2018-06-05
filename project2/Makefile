@@ -12,12 +12,12 @@ MKDIR      := mkdir -p
 $(OBJ_DIR)%.o: $(SRC_DIR)%.c
 	@echo Compile $< -> $@
 	@$(MKDIR) build
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(THREADSFLAG) $(CFLAGS) -c $< -o $@
 
 $(PROJECT): $(OBJ)
 	@echo Linking $(PROJECT)
 	@$(MKDIR) build
-	$(LD) $(LDFLAGS) $(OBJ) -o $(OBJ_DIR)$(PROJECT)
+	$(LD) $(THREADSFLAG) $(LDFLAGS) $(OBJ) -o $(OBJ_DIR)$(PROJECT)
 
 all: $(PROJECT)
 
@@ -29,8 +29,8 @@ doc:
 	@echo "Generating doc"
 	doxygen doxygen.cfg
 
-threads:
-	@echo TODO
+threads: THREADSFLAG := -D THREADS -pthread
+threads: all
 
 help:
 	@echo all: compila il codice sorgente
