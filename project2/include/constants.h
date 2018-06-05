@@ -38,4 +38,22 @@
 #define QUEUE_KEY 44444
 #endif
 
+#ifdef THREADS
+#ifndef NUM_THREADS
+/**
+ * @brief numero di thread
+ */
+#define NUM_THREADS 20
+#endif
+#endif
+
+#ifndef THREADS
+#ifndef NUM_NEWPHEWS
+/**
+ * @brief numero di nipoti
+ */
+#define NUM_NEWPHEWS 2
+#endif
+#endif
+
 /// @}

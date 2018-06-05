@@ -13,7 +13,7 @@
  * @param s1 indirizzo di memoria al segmento di memoria condivisa s1
  * @param output indirizzo di memoria al segmento di memoria condivisa s2
  */
-void nipote(int uid, int lines, void *s1, unsigned *output);
+void nipote(void *ptr);
 
 /**
  * @brief legge la stringa dal segmento S1

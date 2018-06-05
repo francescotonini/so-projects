@@ -9,6 +9,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include <tools.h>
 #include <nipote.h>
@@ -17,20 +18,19 @@
 
 int sem_id;
 struct Status *status;
-int id;
 int msg_size;
 int queue_id;
 
-void nipote(int uid, int lines, void *s1, unsigned *output) {
-    id = uid;
+void nipote(void *ptr) {
+    struct NephewData *data = (struct NephewData *)ptr;
 
     // Get semaphore
     if ((sem_id = semget(SEM_KEY, 2, 0666)) == -1) {
         syserr("nipote", "impossibile recuperare semaforo");
     }
 
-    status = (struct Status *)s1;
-    struct Entry *input = (struct Entry *)(s1 + sizeof(struct Status));
+    status = (struct Status *)data->s1;
+    struct Entry *input = (struct Entry *)(data->s1 + sizeof(struct Status));
 
     // Get logger queue
     if((queue_id = msgget(QUEUE_KEY, 0666)) == -1) {
@@ -39,26 +39,34 @@ void nipote(int uid, int lines, void *s1, unsigned *output) {
     msg_size = sizeof(struct Message);
 
     int my_string;
-    while((my_string = load_string(lines)) >= 0) {
-        unsigned key = find_key(my_string, input, output);
-        save_key(my_string, key, output);
+    while((my_string = load_string(data->lines, data->id)) >= 0) {
+        unsigned key = find_key(my_string, input, data->output);
+        save_key(my_string, key, data->output);
     }
 
+    #ifdef THREADS
+    pthread_exit(0);
+    #else
     exit(0);
+    #endif
 }
 
-int load_string(int lines) {
+int load_string(int lines, int id) {
     lock(0);
     int my_string = status->id_string;
-    if (my_string == lines) {
+    if (my_string > lines - 1) {
         unlock(0);
         return -1;
     }
 
-    status->id_string = my_string + 1;
+    status->id_string = status->id_string + 1;
     status->grandson = id;
 
+    #ifdef THREADS
+    kill(getpid(), SIGUSR1);
+    #else
     kill(getppid(), SIGUSR1);
+    #endif
 
     lock(1);
     unlock(0);

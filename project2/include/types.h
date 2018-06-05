@@ -36,6 +36,13 @@ struct Entry {
     unsigned encoded;
 };
 
+struct NephewData {
+    int id;
+    int lines;
+    void *s1;
+    unsigned *output;
+};
+
 #endif
 
 /// @}

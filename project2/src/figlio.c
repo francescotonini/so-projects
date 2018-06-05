@@ -8,6 +8,7 @@
 #include <sys/msg.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include <tools.h>
 #include <figlio.h>
@@ -18,6 +19,10 @@
 // Global variables
 struct Status *status;
 int sem_id;
+
+void *launch_nephew(void *ptr) {
+    nipote(ptr);
+}
 
 void figlio(int lines, void *s1, unsigned *output) {
     // Collego segnale
@@ -50,25 +55,51 @@ void figlio(int lines, void *s1, unsigned *output) {
     }
     int msg_size = sizeof(struct Message);
 
-    // Crea nipoti
-    pid_t nephew1 = fork();
-    if(nephew1 == -1) {
-        syserr("figlio", "impossibile creare nipote");
+    #ifdef THREADS
+    
+    struct NephewData data[NUM_THREADS];
+    pthread_t threads[NUM_THREADS];
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        data[i].id = i + 1;
+        data[i].s1 = s1;
+        data[i].lines = lines;
+        data[i].output = output;
+
+        if (pthread_create(&threads[i], NULL, launch_nephew, (void *)&data[i])) {
+            syserr("figlio", "impossibile lanciare thread");
+        }
     }
-    else if(nephew1 == 0) {
-        nipote(1, lines, s1, output);
+    
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
     }
 
-    pid_t nephew2 = fork();
-    if(nephew2 == -1) {
-        syserr("figlio", "impossibile creare nipote");
+    #else
+
+    struct NephewData data[NUM_NEWPHEWS];
+    pid_t forks[NUM_NEWPHEWS];
+
+    for (int i = 0; i < NUM_NEWPHEWS; i++) {
+        data[i].id = i + 1;
+        data[i].s1 = s1;
+        data[i].lines = lines;
+        data[i].output = output;
+
+        if ((forks[i] = fork()) == -1) {
+            syserr("figlio", "impossibile creare processo nipote");
+        }
+
+        if (forks[i] == 0) {
+            nipote((void *)&data[i]);
+        }
     }
-    else if(nephew2 == 0) {
-        nipote(2, lines, s1, output);
+    
+    for (int i = 0; i < NUM_NEWPHEWS; i++) {
+        wait(&forks[i]);
     }
 
-    wait(&nephew1);
-    wait(&nephew2);
+    #endif
 
     // Rimuove semafori
     if (semctl(sem_id, 2, IPC_RMID) == -1) {
@@ -82,7 +113,11 @@ void figlio(int lines, void *s1, unsigned *output) {
 void status_updated(int sig_num) {
     if (sig_num == SIGUSR1) {
         char *grandson = itoa(status->grandson);
+        #ifdef THREADS
+        char *str1 = strcct("Il thread ", grandson);
+        #else
         char *str1 = strcct("Il nipote ", grandson);
+        #endif
         str1 = strcct(str1, " sta analizzando la ");
         str1 = strcct(str1, itoa(status->id_string));
         str1 = strcct(str1, "-esima stringa.");
