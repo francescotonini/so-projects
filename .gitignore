@@ -3,3 +3,4 @@ doc/
 build/
 key_finder
 .vscode
+bin/
