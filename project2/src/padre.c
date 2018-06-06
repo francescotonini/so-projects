@@ -4,17 +4,12 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <stdlib.h>
-
 #include <tools.h>
 #include <padre.h>
 #include <figlio.h>
 #include <logger.h>
 #include <types.h>
 #include <constants.h>
-
-// Global variables
-int shmid_s1;
-int shmid_s2;
 
 void padre(char *input_path, char *output_path) {
     // Controlla che il file di output esista. Se così fosse, arresta il processo
@@ -48,13 +43,14 @@ void padre(char *input_path, char *output_path) {
     }
 
     // Crea, collega il segmento di memoria s1 e imposta il campo id_string dell'enum Status a 0
-    void *s1 = attach_segments(SHKEY_S1, sizeof(struct Status) + (n_of_lines * sizeof(struct Entry)), IPC_CREAT | 0600);
+    void *s1 = attach_segments(SHKEY_S1, sizeof(struct Status) + (n_of_lines * sizeof(struct Entry)));
     struct Status *status = (struct Status *)s1;
     struct Entry *input = (struct Entry *)(s1 + sizeof(struct Status));
     status->id_string = 0;
 
     // Crea e collega il segmento di memoria s2
-    unsigned *output = (unsigned *)attach_segments(SHKEY_S2, n_of_lines * sizeof(unsigned), IPC_CREAT | 0600);
+    void *s2 = attach_segments(SHKEY_S2, n_of_lines * sizeof(unsigned));
+    unsigned *output = (unsigned *)s2;
 
     // Carica il file in input
     load_file(input_path, input);
@@ -86,37 +82,35 @@ void padre(char *input_path, char *output_path) {
         save_keys(output_path, output, n_of_lines);
     }
 
-    detach_segments(shmid_s1, s1);
-    detach_segments(shmid_s2, output);
+    detach_segments(SHKEY_S1, s1);
+    detach_segments(SHKEY_S2, output);
 
     exit(0);
 }
 
-void *attach_segments(key_t key, size_t size, int flags) {
+void *attach_segments(key_t key, size_t size) {
     int shmid;
-    if((shmid = shmget(key, size, flags)) < 0) {
+    if((shmid = shmget(key, size, 0600 | IPC_CREAT | IPC_EXCL)) < 0) {
         syserr("padre", "errore shmget");
     }
 
-    void *shm;
-    if ((shm = shmat(shmid, NULL, 0)) == (void *) -1) {
+    void *ptr;
+    if ((ptr = shmat(shmid, NULL, 0)) == (void *) -1) {
         syserr("padre", "errore shmat");
     }
 
-    if (key == SHKEY_S1) {
-        shmid_s1 = shmid;
-    }
-    else if (key == SHKEY_S2) {
-        shmid_s2 = shmid;
-    }
-
-    return shm;
+    return ptr;
 }
 
 void detach_segments(key_t key, void *attached_segment) {
+    int shmid;
+    if((shmid = shmget(key, 0, 0600)) < 0) {
+        syserr("padre", "errore shmget");
+    }
+
     shmdt(attached_segment);
     
-    if (shmctl(key, IPC_RMID, NULL) == -1) {
+    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
         syserr("padre", "errore shmctl");
     }
 }

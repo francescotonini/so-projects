@@ -1,16 +1,14 @@
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/shm.h>
 #include <sys/wait.h>
-#include <sys/ipc.h>
 #include <sys/sem.h>
 #include <sys/msg.h>
 #include <time.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#ifdef THREADS
 #include <pthread.h>
-
+#endif
 #include <tools.h>
 #include <nipote.h>
 #include <types.h>
@@ -18,7 +16,6 @@
 
 int sem_id;
 struct Status *status;
-int msg_size;
 int queue_id;
 
 void nipote(void *ptr) {
@@ -36,7 +33,6 @@ void nipote(void *ptr) {
     if((queue_id = msgget(QUEUE_KEY, 0666)) == -1) {
         syserr("nipote", "impossibile accedere alla coda");
     }
-    msg_size = sizeof(struct Message);
 
     int my_string;
     while((my_string = load_string(data->lines, data->id)) >= 0) {
@@ -126,7 +122,7 @@ void send_timeelapsed(time_t time) {
     end_message.mtype = 2;
     strcp(end_message.text, strcct("chiave trovata in ", itoa(time)));
 
-    if (msgsnd(queue_id, &end_message, msg_size, 0) == -1) {
+    if (msgsnd(queue_id, &end_message, sizeof(struct Message), 0) == -1) {
         syserr("nipote", "impossibile inviare messaggio");
     }
 }

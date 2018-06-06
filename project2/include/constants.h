@@ -3,6 +3,15 @@
 /// @defgroup costanti costanti globali
 /// @{
 
+/**
+ * @brief descrittore standard output
+ */
+#define STDOUT 1
+/**
+ * @brief descrittore standard error
+ */
+#define STDERR 2
+
 #ifndef SHKEY_S1
 /**
  * @brief id della sezione di memoria condivisa s1

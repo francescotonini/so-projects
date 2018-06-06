@@ -19,7 +19,7 @@ void padre(char *input_path, char *output_path);
  * @param flags flag 
  * @return indirizzo di memoria condivisa
  */
-void *attach_segments(key_t key, size_t size, int flags);
+void *attach_segments(key_t key, size_t size);
 
 /**
  * @brief elimina il segmento di memoria condivisa

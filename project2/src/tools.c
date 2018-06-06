@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
-
-#include "tools.h"
+#include <tools.h>
+#include <constants.h>
 
 void syserr(char *prog, char *msg)
 {

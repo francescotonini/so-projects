@@ -36,12 +36,20 @@ struct Entry {
     unsigned encoded;
 };
 
+/**
+ * @brief struttura dati per passaggio informazioni tra figlio e nipote/i
+ */
 struct NephewData {
+    /// @param id identificativo univoco del nipote (es. 1, 2, 3...)
     int id;
+    /// @param lines numbero di righe del file
     int lines;
+    /// @param s1 puntatore alla zona di memoria condivisa che contiene il file di input e la struttura Status
     void *s1;
+    /// @param output puntatore alla zona di memoria condivisa che contiene le chiavi trovate
     unsigned *output;
 };
+
 
 #endif
 

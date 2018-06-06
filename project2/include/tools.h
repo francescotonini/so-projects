@@ -3,18 +3,6 @@
 /// @defgroup tools struttura file di supporto
 /// @{
 
-#ifndef TOOLS
-#define TOOLS
-
-/**
- * @brief descrittore standard output
- */
-#define STDOUT 1
-/**
- * @brief descrittore standard error
- */
-#define STDERR 2
-
 /**
  * @brief funzione di errore alternativa
  */
@@ -67,7 +55,5 @@ void strcp(char *str1, char *str2);
  * @return puntatore ad array di caratteri
  */
 char *utoh(unsigned value);
-
-#endif
 
 /// @}

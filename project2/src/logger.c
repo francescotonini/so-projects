@@ -3,13 +3,11 @@
 #include <sys/msg.h>
 #include <stdlib.h>
 #include <unistd.h>
-
 #include <tools.h>
 #include <logger.h>
 #include <types.h>
 #include <constants.h>
 
-int msg_size;
 int queue_id;
 
 void logger() {
@@ -17,9 +15,8 @@ void logger() {
         syserr("logger", "impossibile creare la coda");
     }
 
-    msg_size = sizeof(struct Message);
     while(polling_receive() != 1) {
-        sleep(1);
+        alarm(1);
     }
 
     if (msgctl(queue_id, IPC_RMID, NULL) == -1) {
@@ -34,7 +31,7 @@ int polling_receive() {
     int status = 0;
     struct Message message;
 
-    while (result != 1 && (status = msgrcv(queue_id, &message, msg_size, 0, 0)) >= 0) {
+    while (result != 1 && (status = msgrcv(queue_id, &message, sizeof(struct Message), 0, 0)) >= 0) {
         if (message.mtype == 1) {
             result = 1;
         }
