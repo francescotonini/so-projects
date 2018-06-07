@@ -146,7 +146,12 @@ struct Entry *load_file(char *name, void *ptr) {
     lseek(fd, current_pos, SEEK_SET);
     while ((n = read(fd, buffer, BUFFER_SIZE)) > 0) {
         if (current_entry_status == 0) {
-            current_entry->clear = *((unsigned *)&buffer);
+            int i;
+            for (int i = 0; i < n && buffer[i] != '>'; i += 4) {
+                current_entry->clear[i / 4] = *((unsigned *)(&buffer + i));
+            }
+
+            current_entry->size = (i + 1);
             current_entry_status = 1;
 
             // Cerca ; e passa a quel punto
@@ -161,11 +166,16 @@ struct Entry *load_file(char *name, void *ptr) {
             lseek(fd, current_pos, SEEK_SET);
         }
         else if (current_entry_status == 1) {
-            current_entry->encoded = *((unsigned *)&buffer);
+            int i;
+            for (int i = 0; i < current_entry->size; i ++) {
+                current_entry->encoded[i] = *((unsigned *)(&buffer + (i * 4)));
+            }
+
             current_entry_status = 0;
 
             // Cerca \n e passa a quel punto
-            for (int i = 0; i < n; i++, current_pos++) {
+            current_pos += current_entry->size * 4;
+            for (int i = current_entry->size * 4; i < n; i++, current_pos++) {
                 if (buffer[i] == '\n') {
                     i = n;
                 }
@@ -216,9 +226,13 @@ int check_keys(struct Entry *input, unsigned *output, int n_of_lines) {
     for (int i = 0; i < n_of_lines; i++, this_entry++) {
         unsigned *key = (output + i);
 
-        if ((this_entry->clear ^ *key) != this_entry->encoded) {
-            printerr("trovata una chiave non compatibile!");
-            return -1;
+        for (int j = 0; j < this_entry->size; j++) {
+            unsigned clear = this_entry->clear[j];
+            unsigned encoded = this_entry->encoded[j];
+            if ((clear ^ *key) != encoded) {
+                printerr("trovata una chiave non compatibile!");
+                return -1;
+            }
         }
     }
 

@@ -31,9 +31,11 @@ struct Message {
  */
 struct Entry {
     /// @param clear parte chiara messaggio
-    unsigned clear;
+    unsigned clear[128];
     /// @param encoded parte cifrata del messaggio
-    unsigned encoded;
+    unsigned encoded[128];
+    /// @param indica il numero di elementi significativi nell'array a partire dal primo (es. 5 significa che i primi 5 elementi dell'array sono significativi)
+    int size;
 };
 
 /**

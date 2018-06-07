@@ -106,8 +106,8 @@ unsigned find_key(int my_string, struct Entry *input, unsigned *output) {
     time_t start = current_timestamp();
 
     struct Entry *this_entry = (input + my_string);
-    unsigned clear = this_entry->clear;
-    unsigned encoded = this_entry->encoded;
+    unsigned clear = this_entry->clear[0];
+    unsigned encoded = this_entry->encoded[0];
     unsigned key = 0;
     while ((clear ^ key) != encoded) {
         key++;
