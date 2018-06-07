@@ -28,13 +28,24 @@ void padre(char *input_path, char *output_path) {
     int n_of_lines = 0;
     int n = 0;
     char buffer[BUFFER_SIZE];
+    int offset = 0;
     if((input_fd = open(input_path, O_RDONLY, 0644)) == -1) {
         syserr("padre", "impossibile aprire il file di input");
     }
     while((n = read(input_fd, buffer, BUFFER_SIZE)) > 0) {
-        for (int i = 0; i < n; i++) {
-            if (buffer[i] == '\n') {
+        for (int i = 0; i < n; i++, offset++) {
+            if (buffer[i] == '>') {
+                i += offset + 2;
+                if (i > n) {
+                    lseek(input_fd, i - n + 1, SEEK_CUR);
+                }
+                else {
+                    offset = -1;
+                }
+            }
+            else if (buffer[i] == '\n') {
                 n_of_lines++;
+                offset = -1;
             }
         }
     }
@@ -206,7 +217,7 @@ int check_keys(struct Entry *input, unsigned *output, int n_of_lines) {
         unsigned *key = (output + i);
 
         if ((this_entry->clear ^ *key) != this_entry->encoded) {
-            println("trovata una chiave non compatibile!");
+            printerr("trovata una chiave non compatibile!");
             return -1;
         }
     }
