@@ -3,7 +3,7 @@
 #include <sys/wait.h>
 #include <sys/sem.h>
 #include <sys/msg.h>
-#include <time.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #ifdef THREADS
@@ -96,10 +96,10 @@ void unlock(int id) {
 }
 
 time_t current_timestamp() {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
+    struct timeval timer;
+    gettimeofday(&timer, NULL);
 
-    return ts.tv_sec;
+    return timer.tv_sec;
 }
 
 unsigned find_key(int my_string, struct Entry *input, unsigned *output) {
