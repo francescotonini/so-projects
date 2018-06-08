@@ -18,7 +18,7 @@ int sem_id;
 struct Status *status;
 int queue_id;
 
-void nipote(void *ptr) {
+void *nipote(void *ptr) {
     struct NephewData *data = (struct NephewData *)ptr;
 
     // Get semaphore
@@ -120,7 +120,10 @@ unsigned find_key(int my_string, struct Entry *input, unsigned *output) {
 void send_timeelapsed(time_t time) {
     struct Message end_message;
     end_message.mtype = 2;
-    strcp(end_message.text, strcct("chiave trovata in ", itoa(time)));
+    char *text = "chiave trovata in ";
+    char *timeToString = itoa(time);
+    char *concat = strcct(text, timeToString);
+    strcp(end_message.text, concat);
 
     if (msgsnd(queue_id, &end_message, sizeof(struct Message), 0) == -1) {
         syserr("nipote", "impossibile inviare messaggio");

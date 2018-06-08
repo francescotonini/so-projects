@@ -20,10 +20,6 @@
 struct Status *status;
 int sem_id;
 
-void *launch_nephew(void *ptr) {
-    nipote(ptr);
-}
-
 void figlio(int lines, void *s1, unsigned *output) {
     // Collego segnale
     signal(SIGUSR1, status_updated);
@@ -66,7 +62,7 @@ void figlio(int lines, void *s1, unsigned *output) {
         data[i].lines = lines;
         data[i].output = output;
 
-        if (pthread_create(&threads[i], NULL, launch_nephew, (void *)&data[i])) {
+        if (pthread_create(&threads[i], NULL, nipote, (void *)&data[i])) {
             syserr("figlio", "impossibile lanciare thread");
         }
     }
