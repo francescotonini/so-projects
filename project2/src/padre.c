@@ -147,15 +147,16 @@ struct Entry *load_file(char *name, void *ptr) {
     while ((n = read(fd, buffer, BUFFER_SIZE)) > 0) {
         if (current_entry_status == 0) {
             int i;
-            for (int i = 0; i < n && buffer[i] != '>'; i += 4) {
-                current_entry->clear[i / 4] = *((unsigned *)(&buffer + i));
+            for (i = 0; i < n && buffer[i] != '>'; i += 4) {
+                current_entry->clear[i / 4] = *((unsigned *)(buffer + i));
             }
 
-            current_entry->size = (i + 1);
+            current_entry->size = (i / 4);
             current_entry_status = 1;
 
             // Cerca ; e passa a quel punto
-            for (int i = 0; i < n; i++, current_pos++) {
+            for (int i = 0; i < n; i++) {
+                current_pos++;
                 if (buffer[i] == '<') {
                     i = n;
                 }
@@ -166,24 +167,14 @@ struct Entry *load_file(char *name, void *ptr) {
             lseek(fd, current_pos, SEEK_SET);
         }
         else if (current_entry_status == 1) {
-            int i;
             for (int i = 0; i < current_entry->size; i ++) {
-                current_entry->encoded[i] = *((unsigned *)(&buffer + (i * 4)));
+                current_entry->encoded[i] = *((unsigned *)(buffer + (i * 4)));
             }
 
             current_entry_status = 0;
 
-            // Cerca \n e passa a quel punto
-            current_pos += current_entry->size * 4;
-            for (int i = current_entry->size * 4; i < n; i++, current_pos++) {
-                if (buffer[i] == '\n') {
-                    i = n;
-                }
-                else if (i == n - 1) {
-                    current_pos += 3;
-                }
-            }
-            lseek(fd, ++current_pos, SEEK_SET);
+            current_pos += (current_entry->size * 4 + 3);
+            lseek(fd, current_pos, SEEK_SET);
 
             current_entry++;
         }
