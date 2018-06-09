@@ -9,17 +9,18 @@ CC         := gcc
 CFLAGS     := -I include/
 MKDIR      := mkdir -p
 
-$(OBJ_DIR)%.o: $(SRC_DIR)%.c
+$(OBJ_DIR)%.o: $(SRC_DIR)%.c | $(OBJ_DIR)
 	@echo Compile $< -> $@
-	@$(MKDIR) build
 	$(CC) $(THREADSFLAG) $(CFLAGS) -c $< -o $@
 
 $(PROJECT): $(OBJ)
 	@echo Linking $(PROJECT)
-	@$(MKDIR) build
 	$(LD) $(THREADSFLAG) $(LDFLAGS) $(OBJ) -o $(OBJ_DIR)$(PROJECT)
 
 all: $(PROJECT)
+
+$(OBJ_DIR):
+	$(MKDIR) $@
 
 install:
 	$(MKDIR) $(BIN_DIR)
@@ -41,7 +42,7 @@ help:
 
 clean:
 	@echo Clean
-	rm $(OBJ) $(OBJ_DIR)$(PROJECT)
+	rm -f $(OBJ) $(OBJ_DIR)$(PROJECT)
 
 .PHONY: all clean install help doc threads
 
