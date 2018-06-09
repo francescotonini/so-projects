@@ -102,7 +102,7 @@ time_t current_timestamp() {
     return timer.tv_sec;
 }
 
-unsigned find_key(int my_string, struct Entry *input, unsigned *output) {
+unsigned find_key(int my_string, struct Entry *input) {
     time_t start = current_timestamp();
 
     struct Entry *this_entry = (input + my_string);

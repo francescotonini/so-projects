@@ -3,9 +3,6 @@
 /// @defgroup types enumeratori
 /// @{
 
-#ifndef TYPES
-#define TYPES
-
 /**
  * @brief struttura di controllo dei nipoti
  */
@@ -51,8 +48,5 @@ struct NephewData {
     /// @param output puntatore alla zona di memoria condivisa che contiene le chiavi trovate
     unsigned *output;
 };
-
-
-#endif
 
 /// @}

@@ -12,7 +12,8 @@
 void figlio(int lines, void *s1, unsigned *output);
 
 /**
- * @brief wrapper del processo padre
+ * @brief intercetta i segnali ricevuti dal processo
+ * @param sig_num tipo del segnale
  */
 void status_updated(int sig_num);
 
