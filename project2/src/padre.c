@@ -88,14 +88,16 @@ void padre(char *input_path, char *output_path) {
     wait(&pid_figlio);
     wait(&pid_logger);
 
-    // Controlla le chiavi e salva
+    // Controlla le chiavi. Se tutte le chiavi sono corrette, salva le chiavi nel file di output
     if (check_keys(input, output, n_of_lines) == 0) { 
         save_keys(output_path, output, n_of_lines);
     }
 
+    // Scollega e rimuove i segmenti
     detach_segments(SHKEY_S1, s1);
     detach_segments(SHKEY_S2, output);
 
+    // Termina
     exit(0);
 }
 
@@ -127,6 +129,18 @@ void detach_segments(key_t key, void *attached_segment) {
 }
 
 struct Entry *load_file(char *name, void *ptr) {
+    /* Breve descrizione del caricamento in memoria.
+        La zona di memoria condivisa S1 è strutturata come un array di enumeratori Entry, dove ogni elemento contiene due array di unsigned di dimensione 128 e una
+        variabile intera che indica il numero di elementi dell'array validi (ovvero gli elementi, da 0 a N, che sono da considerarsi parte del file di input).
+    
+        Il codice che segue apre, legge e chiude il file e nel frattempo converte i char in "blocchi" di variabili unsigned, saltando i caratteri ininfluenti
+        usando un contatore assoluto.
+
+        L'idea del ciclo while che legge il file è di avere il buffer sempre puntato al primo carattere della stringa cifrata o chiara, così da facilitare le operazioni
+        di copia dei dati nella sezione di memoria condivisa S1. Ciò richiede maggiore logica per "saltare" i caratteri non utili (es. fine riga o caratteri di separazione) 
+    */
+
+    // Punto iniziale del segmento di memoria condiviso S1
     struct Entry *segment = (struct Entry *)ptr;
 
     // Apre il file di input
@@ -135,26 +149,32 @@ struct Entry *load_file(char *name, void *ptr) {
         syserr("padre", "impossibile creare il file di input");
     }
 
+    // Indica il numero di byte letti nella "read" corrente
     int n;
-    int offset = 0;
+    // Buffer di lettura/scrittura
     char buffer[BUFFER_SIZE];
+    // Indica la struttura che è in elaborazione. Questo puntatore verrà incrementato ogni volta che una riga intera sarà stata analizzata
     struct Entry *current_entry = segment;
+    // Posizione corrente del file. E' un contatore assoluto del numero di byte letti
     int current_pos = 1;
+    // Variabile di controllo dello stato di lettura della riga. Se la variabile ha valore 0, significa che buffer contiene dati della stringa plain.
+    // Se la variabile ha valore 1, significa che buffer contiene dati della stringa encoded
     int current_entry_status = 0;
 
     // Salto il primo carattere (non utile ai fini del caricamento nel file)
     lseek(fd, current_pos, SEEK_SET);
     while ((n = read(fd, buffer, BUFFER_SIZE)) > 0) {
         if (current_entry_status == 0) {
+            // Copia il buffer all'interno del campo "clear" della struttura Entry
+            // La copia viene fatta "a blocchi di 4 caratteri"
             int i;
             for (i = 0; i < n && buffer[i] != '>'; i += 4) {
                 current_entry->clear[i / 4] = *((unsigned *)(buffer + i));
             }
 
             current_entry->size = (i / 4);
-            current_entry_status = 1;
 
-            // Cerca ; e passa a quel punto
+            // Cerco il carattere che preannuncia la parte cifrata della riga, così da poter "saltare" a quella posizione
             for (int i = 0; i < n; i++) {
                 current_pos++;
                 if (buffer[i] == '<') {
@@ -165,18 +185,25 @@ struct Entry *load_file(char *name, void *ptr) {
                 }
             }
             lseek(fd, current_pos, SEEK_SET);
+
+            // La prossima lettura riguarderà la parte cifrata della riga, modifico la variabile di conseguenza
+            current_entry_status = 1;
         }
         else if (current_entry_status == 1) {
+            // La copia viene effettuata a "blocchi di 4 caratteri"
             for (int i = 0; i < current_entry->size; i ++) {
                 current_entry->encoded[i] = *((unsigned *)(buffer + (i * 4)));
             }
 
-            current_entry_status = 0;
-
+            // Salto alla prima posizione della prossima riga da analizzare (se esiste)
             current_pos += (current_entry->size * 4 + 3);
             lseek(fd, current_pos, SEEK_SET);
 
+            // La lettura per la riga attuale è terminata, modifico il puntatore alla zona di memoria condivisa affinché passi alla prossima riga
             current_entry++;
+
+            // La prossima lettura riguarderà la parte in chiaro della riga successiva, modifico la variabile di conseguenza
+            current_entry_status = 1;
         }
     }
 
@@ -191,7 +218,7 @@ struct Entry *load_file(char *name, void *ptr) {
 void save_keys(char *name, unsigned *keys, int n_of_lines) {
     // Crea e apre il file di output
     int fd;
-    if((fd = creat(name, O_RDWR ^ 0644)) == -1) {
+    if((fd = creat(name, O_RDWR | 0644)) == -1) {
         syserr("padre", "impossibile creare il file di output");
     }
 

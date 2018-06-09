@@ -9,6 +9,5 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    // Here we go!
     padre(argv[1], argv[2]);
 }

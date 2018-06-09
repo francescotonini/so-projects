@@ -16,7 +16,7 @@
 #include <types.h>
 #include <constants.h>
 
-// Global variables
+// Variabili globali
 struct Status *status;
 int sem_id;
 
@@ -24,8 +24,8 @@ void figlio(int lines, void *s1, unsigned *output) {
     // Collego segnale
     signal(SIGUSR1, status_updated);
 
-    // Crea due semafori
-    if ((sem_id = semget(SEM_KEY, 2, IPC_CREAT | 0666)) < 0) {
+    // Crea due semafori. Il primo impostato a 1 mentre il secondo a 0
+    if ((sem_id = semget(SEM_KEY, 2, IPC_CREAT | IPC_EXCL | 0666)) < 0) {
         syserr("figlio", "impossibile creare i semafori");
     }
     struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
