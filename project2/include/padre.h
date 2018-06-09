@@ -2,6 +2,7 @@
 /// @defgroup padre struttura processo padre
 /// @{
 
+#include <types.h>
 #include <sys/shm.h>
 #include <sys/ipc.h>
 
@@ -33,7 +34,7 @@ void detach_segments(key_t key, void *attached_segment);
  * @param name nome file
  * @param ptr indirizzo alla posizione di memoria del segmento condiviso S1 dove sarà copiato il file
  */
-struct Entry *load_file(char *name, void *ptr);
+void load_file(char *name, void *ptr);
 
 /**
  * @brief salva le chiavi trovate sul file di output indicato

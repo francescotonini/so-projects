@@ -7,7 +7,11 @@
 
 void syserr(char *prog, char *msg)
 {
-    fprintf(stderr, "%s - error: %s\n",prog, msg);
+    char *error = " error: ";
+
+    write(STDERR, prog, strsize(prog));
+    write(STDERR, error, strsize(error));
+    write(STDERR, msg, strsize(msg));
     perror("system error");
     exit(1);
 }

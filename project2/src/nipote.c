@@ -36,7 +36,7 @@ void *nipote(void *ptr) {
 
     int my_string;
     while((my_string = load_string(data->lines, data->id)) >= 0) {
-        unsigned key = find_key(my_string, input, data->output);
+        unsigned key = find_key(my_string, input);
         save_key(my_string, key, data->output);
     }
 

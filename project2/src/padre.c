@@ -128,7 +128,7 @@ void detach_segments(key_t key, void *attached_segment) {
     }
 }
 
-struct Entry *load_file(char *name, void *ptr) {
+void load_file(char *name, void *ptr) {
     /* Breve descrizione del caricamento in memoria.
         La zona di memoria condivisa S1 è strutturata come un array di enumeratori Entry, dove ogni elemento contiene due array di unsigned di dimensione 128 e una
         variabile intera che indica il numero di elementi dell'array validi (ovvero gli elementi, da 0 a N, che sono da considerarsi parte del file di input).
@@ -203,7 +203,7 @@ struct Entry *load_file(char *name, void *ptr) {
             current_entry++;
 
             // La prossima lettura riguarderà la parte in chiaro della riga successiva, modifico la variabile di conseguenza
-            current_entry_status = 1;
+            current_entry_status = 0;
         }
     }
 
@@ -211,8 +211,6 @@ struct Entry *load_file(char *name, void *ptr) {
     if(close(fd) == -1) {
         syserr("padre", "impossibile chiudere il file di input");
     }
-
-    return segment;
 }
 
 void save_keys(char *name, unsigned *keys, int n_of_lines) {

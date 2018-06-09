@@ -52,7 +52,7 @@
 /**
  * @brief numero di thread
  */
-#define NUM_THREADS 4
+#define NUM_THREADS 8
 #endif
 #endif
 
