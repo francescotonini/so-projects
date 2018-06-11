@@ -128,6 +128,9 @@ void send_timeelapsed(time_t time) {
     if (msgsnd(queue_id, &end_message, sizeof(struct Message), 0) == -1) {
         syserr("nipote", "impossibile inviare messaggio");
     }
+
+    free(timeToString);
+    free(concat);
 }
 
 void save_key(int my_string, unsigned key, unsigned *output) {

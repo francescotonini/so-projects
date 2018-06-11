@@ -42,6 +42,8 @@ void figlio(int lines, void *s1, unsigned *output) {
         syserr("figlio", "impossibile impostare il semaforo a 0");
     }
 
+    free(sops);
+
     status = (struct Status *)s1;
 
     // Recupera coda logger
@@ -109,18 +111,23 @@ void figlio(int lines, void *s1, unsigned *output) {
 void status_updated(int sig_num) {
     if (sig_num == SIGUSR1) {
         char *grandson = itoa(status->grandson);
+        char *idString = itoa(status->id_string);
         #ifdef THREADS
         char *str1 = strcct("Il thread ", grandson);
         #else
         char *str1 = strcct("Il nipote ", grandson);
         #endif
-        str1 = strcct(str1, " sta analizzando la ");
-        str1 = strcct(str1, itoa(status->id_string));
-        str1 = strcct(str1, "-esima stringa.");
+        char *str2 = strcct(str1, " sta analizzando la ");
+        char *str3 = strcct(str2, idString);
+        char *str4 = strcct(str3, "-esima stringa.");
 
-        println(str1);
+        println(str4);
         free(grandson);
         free(str1);
+        free(str2);
+        free(str3);
+        free(str4);
+        free(idString);
         unlock(1);
     }
 }
