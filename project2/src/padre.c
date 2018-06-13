@@ -89,10 +89,9 @@ void padre(char *input_path, char *output_path) {
     wait(&pid_figlio);
     wait(&pid_logger);
 
-    // Controlla le chiavi. Se tutte le chiavi sono corrette, salva le chiavi nel file di output
-    if (check_keys(input, output, n_of_lines) == 0) { 
-        save_keys(output_path, output, n_of_lines);
-    }
+    // Controlla e salva sul file le chiavi trovate
+    check_keys(input, output, n_of_lines);
+    save_keys(output_path, output, n_of_lines);
 
     // Scollega e rimuove i segmenti
     detach_segments(SHKEY_S1, s1);
@@ -240,7 +239,7 @@ void save_keys(char *name, unsigned *keys, int n_of_lines) {
     }
 }
 
-int check_keys(struct Entry *input, unsigned *output, int n_of_lines) {
+void check_keys(struct Entry *input, unsigned *output, int n_of_lines) {
     struct Entry *this_entry = input;
     int i;
     for (i = 0; i < n_of_lines; i++, this_entry++) {
@@ -252,10 +251,7 @@ int check_keys(struct Entry *input, unsigned *output, int n_of_lines) {
             unsigned encoded = this_entry->encoded[j];
             if ((clear ^ *key) != encoded) {
                 printerr("trovata una chiave non compatibile!");
-                return -1;
             }
         }
     }
-
-    return 0;
 }

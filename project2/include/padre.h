@@ -9,13 +9,13 @@
 /**
  * @brief wrapper del processo padre
  * @param input_path percorso del file di input
- * @param output_path percorsro del file di output
+ * @param output_path percorso del file di output
  * @info se il file di output esiste, il processo termina immediatamente
  */
 void padre(char *input_path, char *output_path);
 
 /**
- * @brief crea un e collega un segmento di memoria condivisa
+ * @brief crea e collega un segmento di memoria condivisa
  * @param key identificatore segmento di memoria condivisa
  * @param size dimensione segmento
  * @return indirizzo della memoria condivisa appena creata e collegata
@@ -49,8 +49,7 @@ void save_keys(char *name, unsigned *keys, int n_of_lines);
  * @param input segmento di memoria che contiene il file di input
  * @param output segmento di memoria che contiene le chiavi trovate
  * @param n_of_lines numero di righe del file di input/output
- * @return 0 se tutte le chiavi sono state verificate correttamente; altrimenti -1
  */
-int check_keys(struct Entry *input, unsigned *output, int n_of_lines);
+void check_keys(struct Entry *input, unsigned *output, int n_of_lines);
 
 /// @}

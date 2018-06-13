@@ -12,6 +12,12 @@
 
 int queue_id;
 
+void catch_alarm(int sig_num) {
+    if (sig_num == SIGALRM) {
+        return;
+    }
+}
+
 void logger() {
     signal(SIGALRM, catch_alarm);
 
@@ -30,12 +36,6 @@ void logger() {
     }
 
     exit(0);
-}
-
-void catch_alarm(int sig_num) {
-    if (sig_num == SIGALRM) {
-        return;
-    }
 }
 
 int polling_receive() {

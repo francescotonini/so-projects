@@ -8,7 +8,9 @@
 #include <sys/msg.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#ifdef THREADS
 #include <pthread.h>
+#endif
 
 #include <tools.h>
 #include <figlio.h>

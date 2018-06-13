@@ -13,10 +13,4 @@ void logger();
  */
 int polling_receive();
 
-/**
- * @brief intercetta i segnali inviati al processo
- * @param sig_num codice segnale
- */ 
-void catch_alarm(int sig_num);
-
 /// @}

@@ -4,7 +4,7 @@
 /// @{
 
 /**
- * @brief wrapper del processo padre
+ * @brief wrapper del processo figlio
  * @param lines numero di linee nel file
  * @param s1 indirizzo di memoria al segmento di memoria condivisa s1
  * @param output indirizzo di memoria al segmento di memoria condivisa s2

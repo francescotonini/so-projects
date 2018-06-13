@@ -34,10 +34,32 @@ void *nipote(void *ptr) {
         syserr("nipote", "impossibile accedere alla coda");
     }
 
-    int my_string;
-    while((my_string = load_string(data->lines, data->id)) >= 0) {
-        unsigned key = find_key(my_string, input);
-        save_key(my_string, key, data->output);
+    int lines = data->lines;
+    int my_string = 0;
+    while(my_string < lines) {
+        lock(0);
+
+        my_string = status->id_string;
+        if (my_string < lines) {
+            status->id_string = status->id_string + 1;
+            status->grandson = data->id;
+
+            #ifdef THREADS
+            kill(getpid(), SIGUSR1);
+            #else
+            kill(getppid(), SIGUSR1);
+            #endif
+
+            lock(1);
+            unlock(0);
+
+            struct Entry *this_entry = load_string(my_string, input);
+            unsigned key = find_key(this_entry);
+            save_key(my_string, key, data->output);
+        }
+        else {
+            unlock(0);
+        }  
     }
 
     #ifdef THREADS
@@ -47,26 +69,8 @@ void *nipote(void *ptr) {
     #endif
 }
 
-int load_string(int lines, int id) {
-    lock(0);
-    int my_string = status->id_string;
-    if (my_string > lines - 1) {
-        unlock(0);
-        return -1;
-    }
-
-    status->id_string = status->id_string + 1;
-    status->grandson = id;
-
-    #ifdef THREADS
-    kill(getpid(), SIGUSR1);
-    #else
-    kill(getppid(), SIGUSR1);
-    #endif
-
-    lock(1);
-    unlock(0);
-    return my_string;
+struct Entry *load_string(int id, struct Entry *input) {
+    return (input + id);
 }
 
 void lock(int id) {
@@ -102,10 +106,9 @@ time_t current_timestamp() {
     return timer.tv_sec;
 }
 
-unsigned find_key(int my_string, struct Entry *input) {
+unsigned find_key(struct Entry *this_entry) {
     time_t start = current_timestamp();
 
-    struct Entry *this_entry = (input + my_string);
     unsigned clear = this_entry->clear[0];
     unsigned encoded = this_entry->encoded[0];
     unsigned key = 0;

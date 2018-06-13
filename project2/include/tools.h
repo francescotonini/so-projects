@@ -23,7 +23,7 @@ void printerr(char *str);
 /**
  * @brief conta il numero di caratteri in una stringa
  * @param str puntatore ad un array di caratteri
- * @return numero di caratteri nella string adata (escluso \0)
+ * @return numero di caratteri nella stringa data (escluso \0)
  */
 int strsize(char *str);
 
