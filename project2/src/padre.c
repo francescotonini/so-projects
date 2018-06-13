@@ -33,7 +33,8 @@ void padre(char *input_path, char *output_path) {
         syserr("padre", "impossibile aprire il file di input");
     }
     while((n = read(input_fd, buffer, BUFFER_SIZE)) > 0) {
-        for (int i = 0; i < n; i++, offset++) {
+        int i;
+        for (i = 0; i < n; i++, offset++) {
             if (buffer[i] == '>') {
                 i += offset + 2;
                 if (i > n) {
@@ -175,7 +176,7 @@ void load_file(char *name, void *ptr) {
             current_entry->size = (i / 4);
 
             // Cerco il carattere che preannuncia la parte cifrata della riga, così da poter "saltare" a quella posizione
-            for (int i = 0; i < n; i++) {
+            for (i = 0; i < n; i++) {
                 current_pos++;
                 if (buffer[i] == '<') {
                     i = n;
@@ -191,7 +192,8 @@ void load_file(char *name, void *ptr) {
         }
         else if (current_entry_status == 1) {
             // La copia viene effettuata a "blocchi di 4 caratteri"
-            for (int i = 0; i < current_entry->size; i ++) {
+            int i;
+            for (i = 0; i < current_entry->size; i ++) {
                 current_entry->encoded[i] = *((unsigned *)(buffer + (i * 4)));
             }
 
@@ -220,7 +222,8 @@ void save_keys(char *name, unsigned *keys, int n_of_lines) {
         syserr("padre", "impossibile creare il file di output");
     }
 
-    for (int i = 0; i < n_of_lines; i++) {
+    int i;
+    for (i = 0; i < n_of_lines; i++) {
         unsigned *this = (keys + i);
         char *converted = utoh(*this);
 
@@ -239,10 +242,12 @@ void save_keys(char *name, unsigned *keys, int n_of_lines) {
 
 int check_keys(struct Entry *input, unsigned *output, int n_of_lines) {
     struct Entry *this_entry = input;
-    for (int i = 0; i < n_of_lines; i++, this_entry++) {
+    int i;
+    for (i = 0; i < n_of_lines; i++, this_entry++) {
         unsigned *key = (output + i);
 
-        for (int j = 0; j < this_entry->size; j++) {
+        int j;
+        for (j = 0; j < this_entry->size; j++) {
             unsigned clear = this_entry->clear[j];
             unsigned encoded = this_entry->encoded[j];
             if ((clear ^ *key) != encoded) {

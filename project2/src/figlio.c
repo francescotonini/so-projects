@@ -58,7 +58,8 @@ void figlio(int lines, void *s1, unsigned *output) {
     struct NephewData data[NUM_THREADS];
     pthread_t threads[NUM_THREADS];
 
-    for (int i = 0; i < NUM_THREADS; i++) {
+    int i;
+    for (i = 0; i < NUM_THREADS; i++) {
         data[i].id = i + 1;
         data[i].s1 = s1;
         data[i].lines = lines;
@@ -69,7 +70,7 @@ void figlio(int lines, void *s1, unsigned *output) {
         }
     }
     
-    for (int i = 0; i < NUM_THREADS; i++) {
+    for (i = 0; i < NUM_THREADS; i++) {
         pthread_join(threads[i], NULL);
     }
 
@@ -78,7 +79,8 @@ void figlio(int lines, void *s1, unsigned *output) {
     struct NephewData data[NUM_NEWPHEWS];
     pid_t forks[NUM_NEWPHEWS];
 
-    for (int i = 0; i < NUM_NEWPHEWS; i++) {
+    int i;
+    for (i = 0; i < NUM_NEWPHEWS; i++) {
         data[i].id = i + 1;
         data[i].s1 = s1;
         data[i].lines = lines;
@@ -93,7 +95,7 @@ void figlio(int lines, void *s1, unsigned *output) {
         }
     }
     
-    for (int i = 0; i < NUM_NEWPHEWS; i++) {
+    for (i = 0; i < NUM_NEWPHEWS; i++) {
         wait(&forks[i]);
     }
 

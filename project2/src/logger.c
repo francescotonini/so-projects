@@ -3,6 +3,8 @@
 #include <sys/msg.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
+
 #include <tools.h>
 #include <logger.h>
 #include <types.h>
@@ -11,12 +13,16 @@
 int queue_id;
 
 void logger() {
+    signal(SIGALRM, catch_alarm);
+
     if((queue_id = msgget(QUEUE_KEY, (IPC_CREAT | 0666))) == -1) {
         syserr("logger", "impossibile creare la coda");
     }
 
     while(polling_receive() != 1) {
         alarm(1);
+        pause();
+        alarm(0);
     }
 
     if (msgctl(queue_id, IPC_RMID, NULL) == -1) {
@@ -24,6 +30,12 @@ void logger() {
     }
 
     exit(0);
+}
+
+void catch_alarm(int sig_num) {
+    if (sig_num == SIGALRM) {
+        return;
+    }
 }
 
 int polling_receive() {

@@ -39,12 +39,13 @@ int strsize(char *str) {
 char *itoa(int n) {
     int tmp = n;
     int digits = 0;
+    int i;
     do {
         digits++;
     } while((tmp /= 10) != 0);
 
     char *result = (char *)malloc((sizeof(char) * digits) + 1);
-    for (int i = digits - 1; i >= 0; i--) {
+    for (i = digits - 1; i >= 0; i--) {
         int digit = (n % 10);
         result[i] = (char)(digit + '0');
         n /= 10;
@@ -61,11 +62,12 @@ char *strcct(char *str1, char *str2) {
     int newStringIndex = 0;
     char *result = (char *)malloc(sizeof(char) * newStringSize);
 
-    for (int i = 0; i < len1; i++, newStringIndex++) {
+    int i;
+    for (i = 0; i < len1; i++, newStringIndex++) {
         result[newStringIndex] = str1[i];
     }
 
-    for (int i = 0; i < len2; i++, newStringIndex++) {
+    for (i = 0; i < len2; i++, newStringIndex++) {
         result[newStringIndex] = str2[i];
     }
 
@@ -92,7 +94,8 @@ char *utoh(unsigned value) {
 
     char *new_string = (char *)malloc(sizeof(char) * 8);
 
-    for(int i = 7; i >= 0; i--){
+    int i;
+    for(i = 7; i >= 0; i--){
         if((value % 16) <= 9){
             new_string[i] = (char) (value % 16) + '0';
         }
