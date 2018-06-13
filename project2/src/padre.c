@@ -229,11 +229,11 @@ void save_keys(char *name, unsigned *keys, int n_of_lines) {
 
         write(fd, "0x", 2);
         write(fd, converted, 8);
-        write(fd, "\n", 1);
+        write(fd, "\r\n", 2);
 
         free(converted);
     }
-
+    
     // Chiude il file di output
     if(close(fd) == -1) {
         syserr("padre", "impossibile chiudere il file di output");
