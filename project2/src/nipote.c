@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <errno.h>
 #ifdef THREADS
 #include <pthread.h>
 #endif
@@ -44,13 +45,32 @@ void *nipote(void *ptr) {
             status->id_string = status->id_string + 1;
             status->grandson = data->id;
 
+            char *grandson = itoa(status->grandson);
+            char *idString = itoa(status->id_string);
+            #ifdef THREADS
+            char *str1 = strcct("Il thread ", grandson);
+            #else
+            char *str1 = strcct("Il nipote ", grandson);
+            #endif
+            char *str2 = strcct(str1, " sta analizzando la ");
+            char *str3 = strcct(str2, idString);
+            char *str4 = strcct(str3, "-esima stringa.\n");
+
+            write(data->pipe[1], str4, strsize(str4));
+
+            free(grandson);
+            free(str1);
+            free(str2);
+            free(str3);
+            free(str4);
+            free(idString);
+
             #ifdef THREADS
             kill(getpid(), SIGUSR1);
             #else
             kill(getppid(), SIGUSR1);
             #endif
 
-            lock(1);
             unlock(0);
 
             struct Entry *this_entry = load_string(my_string, input);
@@ -80,7 +100,12 @@ void lock(int id) {
     sops->sem_flg = 0;
 
     if (semop(sem_id, sops, 1) == -1) {
-        syserr("nipote", "impossibile bloccare il semaforo");
+        if (errno == EINTR) {
+            lock(id);
+        }
+        else {
+            syserr("nipote", "impossibile bloccare il semaforo");
+        }
     }
 
     free(sops);
@@ -93,7 +118,12 @@ void unlock(int id) {
     sops->sem_flg = 0;
 
     if (semop(sem_id, sops, 1) == -1) {
-        syserr("nipote", "impossibile sbloccare il semaforo");
+        if (errno == EINTR) {
+            unlock(id);
+        }
+        else {
+            syserr("nipote", "impossibile sbloccare il semaforo");
+        }
     }
 
     free(sops);
@@ -128,7 +158,8 @@ void send_timeelapsed(time_t time) {
     char *concat = strcct(text, timeToString);
     strcp(end_message.text, concat);
 
-    if (msgsnd(queue_id, &end_message, sizeof(struct Message), 0) == -1) {
+    size_t size = sizeof(struct Message) - sizeof(long);
+    if (msgsnd(queue_id, &end_message, size, 0) == -1) {
         syserr("nipote", "impossibile inviare messaggio");
     }
 

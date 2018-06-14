@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 
 #include <tools.h>
 #include <logger.h>
@@ -40,10 +41,10 @@ void logger() {
 
 int polling_receive() {
     int result = 0;
-    int status = 0;
     struct Message message;
 
-    while (result != 1 && (status = msgrcv(queue_id, &message, sizeof(struct Message), 0, 0)) >= 0) {
+    size_t size = sizeof(struct Message) - sizeof(long);
+    while (msgrcv(queue_id, &message, size, 0, IPC_NOWAIT) > 0) {
         if (message.mtype == 1) {
             result = 1;
         }
@@ -55,10 +56,6 @@ int polling_receive() {
 
         println(message.text);
     };
-
-    if (status == -1) {
-        syserr("logger", "impossibile leggere dalla coda");
-    }
 
     return result;
 }

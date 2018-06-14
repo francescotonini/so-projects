@@ -18,7 +18,9 @@ void syserr(char *prog, char *msg)
 
 void println(char *str) {
     char *strWithNewline = strcct(str, "\n");
-    write(STDOUT, strWithNewline, strsize(strWithNewline));
+    if (write(STDOUT, strWithNewline, strsize(strWithNewline)) == -1) {
+        syserr("tools.c", "write");
+    }
 
     free(strWithNewline);
 }

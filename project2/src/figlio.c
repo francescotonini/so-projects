@@ -8,6 +8,7 @@
 #include <sys/msg.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>
 #ifdef THREADS
 #include <pthread.h>
 #endif
@@ -21,13 +22,22 @@
 // Variabili globali
 struct Status *status;
 int sem_id;
+int p[2];
 
 void figlio(int lines, void *s1, unsigned *output) {
     // Collego segnale
     signal(SIGUSR1, status_updated);
 
+    // Creo pipe
+    if (pipe(p) == -1) {
+        syserr("figlio", "impossibile creare pipe");
+    }
+
+    fcntl(p[0], F_SETFL, O_NONBLOCK);
+    fcntl(p[1], F_SETFL, O_NONBLOCK);
+
     // Crea due semafori. Il primo impostato a 1 mentre il secondo a 0
-    if ((sem_id = semget(SEM_KEY, 2, IPC_CREAT | IPC_EXCL | 0666)) < 0) {
+    if ((sem_id = semget(SEM_KEY, 3, IPC_CREAT | IPC_EXCL | 0666)) < 0) {
         syserr("figlio", "impossibile creare i semafori");
     }
     struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
@@ -43,6 +53,12 @@ void figlio(int lines, void *s1, unsigned *output) {
     if (semop(sem_id, sops, 1) == -1) {
         syserr("figlio", "impossibile impostare il semaforo a 0");
     }
+    sops->sem_num = 2;
+    sops->sem_op = 1;
+    sops->sem_flg = 0;
+    if (semop(sem_id, sops, 1) == -1) {
+        syserr("figlio", "impossibile impostare il semaforo a 1");
+    }
 
     free(sops);
 
@@ -53,7 +69,6 @@ void figlio(int lines, void *s1, unsigned *output) {
     if((queue_id = msgget(QUEUE_KEY, (IPC_CREAT | 0666))) == -1) {
         syserr("figlio", "impossibile accedere  alla coda");
     }
-    int msg_size = sizeof(struct Message);
 
     #ifdef THREADS
     
@@ -66,6 +81,8 @@ void figlio(int lines, void *s1, unsigned *output) {
         data[i].s1 = s1;
         data[i].lines = lines;
         data[i].output = output;
+        data[i].pipe[0] = p[0];
+        data[i].pipe[1] = p[1];
 
         if (pthread_create(&threads[i], NULL, nipote, (void *)&data[i])) {
             syserr("figlio", "impossibile lanciare thread");
@@ -87,6 +104,8 @@ void figlio(int lines, void *s1, unsigned *output) {
         data[i].s1 = s1;
         data[i].lines = lines;
         data[i].output = output;
+        data[i].pipe[0] = p[0];
+        data[i].pipe[1] = p[1];
 
         if ((forks[i] = fork()) == -1) {
             syserr("figlio", "impossibile creare processo nipote");
@@ -108,40 +127,27 @@ void figlio(int lines, void *s1, unsigned *output) {
         syserr("figlio", "impossibile rimuovere i semafori");
     }
 
-    send_terminate(queue_id, msg_size);
+    send_terminate(queue_id);
     exit(0);
 }
 
 void status_updated(int sig_num) {
     if (sig_num == SIGUSR1) {
-        char *grandson = itoa(status->grandson);
-        char *idString = itoa(status->id_string);
-        #ifdef THREADS
-        char *str1 = strcct("Il thread ", grandson);
-        #else
-        char *str1 = strcct("Il nipote ", grandson);
-        #endif
-        char *str2 = strcct(str1, " sta analizzando la ");
-        char *str3 = strcct(str2, idString);
-        char *str4 = strcct(str3, "-esima stringa.");
-
-        println(str4);
-        free(grandson);
-        free(str1);
-        free(str2);
-        free(str3);
-        free(str4);
-        free(idString);
-        unlock(1);
+        char buffer[512];
+        int n;
+        while((n = read(p[0], buffer, 512)) > 0) {
+            write(STDOUT, buffer, n);
+        }
     }
 }
 
-void send_terminate(int queue_id, int msg_size) {
+void send_terminate(int queue_id) {
     struct Message end_message;
     end_message.mtype = 1;
     strcp(end_message.text, "ricerca conclusa.");
 
-    if (msgsnd(queue_id, &end_message, msg_size, 0) == -1) {
+    size_t size = sizeof(struct Message) - sizeof(long);
+    if (msgsnd(queue_id, &end_message, size, 0) == -1) {
         syserr("figlio", "impossibile inviare messaggio di terminazione");
     }
 }

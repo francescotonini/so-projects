@@ -10,4 +10,5 @@ int main(int argc, char *argv[]) {
     }
 
     padre(argv[1], argv[2]);
+    return 0;
 }

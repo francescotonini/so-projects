@@ -20,8 +20,7 @@ void status_updated(int sig_num);
 /**
  * @brief deposita il messaggio di terminazione nella coda di messaggi del processo logger
  * @param queue_id identificativo coda
- * @param msg_size dimensione messaggio
  */
-void send_terminate(int queue_id, int msg_size);
+void send_terminate(int queue_id);
 
 /// @}

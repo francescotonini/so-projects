@@ -50,6 +50,7 @@ struct NephewData {
     void *s1;
     /// @param output puntatore alla zona di memoria condivisa che contiene le chiavi trovate
     unsigned *output;
+    int pipe[2];
 };
 
 #endif
