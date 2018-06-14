@@ -11,11 +11,11 @@ MKDIR      := mkdir -p
 
 $(OBJ_DIR)%.o: $(SRC_DIR)%.c | $(OBJ_DIR)
 	@echo Compile $< -> $@
-	$(CC) -ggdb -Wall $(THREADSFLAG) $(CFLAGS) -c $< -o $@
+	$(CC) $(THREADSFLAG) $(CFLAGS) -c $< -o $@
 
 $(PROJECT): $(OBJ)
 	@echo Linking $(PROJECT)
-	$(LD) -ggdb -Wall $(THREADSFLAG) $(LDFLAGS) $(OBJ) -o $(OBJ_DIR)$(PROJECT)
+	$(LD) $(THREADSFLAG) $(LDFLAGS) $(OBJ) -o $(OBJ_DIR)$(PROJECT)
 
 all: $(PROJECT)
 

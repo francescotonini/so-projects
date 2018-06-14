@@ -52,7 +52,7 @@
 /**
  * @brief numero di thread
  */
-#define NUM_THREADS 16
+#define NUM_THREADS 32
 #endif
 #endif
 
@@ -61,7 +61,7 @@
 /**
  * @brief numero di nipoti
  */
-#define NUM_NEWPHEWS 2
+#define NUM_NEWPHEWS 16
 #endif
 #endif
 

@@ -23,15 +23,13 @@ struct Entry *load_string(int id, struct Entry *input);
 
 /**
  * @brief blocca l'accesso esclusivo alla regione critica del campo status
- * @param id indice semaforo
  */
-void lock(int id);
+void lock();
 
 /**
  * @brief sblocca l'accesso esclusivo alla regione critica del campo status
- * @param id indice semaforo
  */
-void unlock(int id);
+void unlock();
 
 /**
  * @brief trova la chiave di cifratura

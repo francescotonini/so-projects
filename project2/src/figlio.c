@@ -35,7 +35,7 @@ void figlio(int lines, void *s1, unsigned *output) {
     fcntl(p[0], F_SETFL, O_NONBLOCK);
     fcntl(p[1], F_SETFL, O_NONBLOCK);
 
-    // Crea due semafori. Il primo impostato a 1 mentre il secondo a 0
+    // Crea un semaforo per accedere in modo esclusivo a status
     if ((sem_id = semget(SEM_KEY, 1, IPC_CREAT | IPC_EXCL | 0666)) < 0) {
         syserr("figlio", "impossibile creare i semafori");
     }
