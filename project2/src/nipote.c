@@ -23,7 +23,7 @@ void *nipote(void *ptr) {
     struct NephewData *data = (struct NephewData *)ptr;
 
     // Get semaphore
-    if ((sem_id = semget(SEM_KEY, 2, 0666)) == -1) {
+    if ((sem_id = semget(SEM_KEY, 1, 0666)) == -1) {
         syserr("nipote", "impossibile recuperare semaforo");
     }
 
@@ -38,7 +38,7 @@ void *nipote(void *ptr) {
     int lines = data->lines;
     int my_string = 0;
     while(my_string < lines) {
-        lock(0);
+        lock();
 
         my_string = status->id_string;
         if (my_string < lines) {
@@ -56,7 +56,7 @@ void *nipote(void *ptr) {
             char *str3 = strcct(str2, idString);
             char *str4 = strcct(str3, "-esima stringa.\n");
 
-            write(data->pipe[1], str4, strsize(str4));
+            write(data->pipe, str4, strsize(str4));
 
             free(grandson);
             free(str1);
@@ -71,14 +71,14 @@ void *nipote(void *ptr) {
             kill(getppid(), SIGUSR1);
             #endif
 
-            unlock(0);
+            unlock();
 
             struct Entry *this_entry = load_string(my_string, input);
             unsigned key = find_key(this_entry);
             save_key(my_string, key, data->output);
         }
         else {
-            unlock(0);
+            unlock();
         }  
     }
 
@@ -93,15 +93,15 @@ struct Entry *load_string(int id, struct Entry *input) {
     return (input + id);
 }
 
-void lock(int id) {
+void lock() {
     struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
-    sops->sem_num = id;
+    sops->sem_num = 0;
     sops->sem_op = -1;
     sops->sem_flg = 0;
 
     if (semop(sem_id, sops, 1) == -1) {
         if (errno == EINTR) {
-            lock(id);
+            lock();
         }
         else {
             syserr("nipote", "impossibile bloccare il semaforo");
@@ -111,15 +111,15 @@ void lock(int id) {
     free(sops);
 }
 
-void unlock(int id) {
+void unlock() {
     struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
-    sops->sem_num = id;
+    sops->sem_num = 0;
     sops->sem_op = 1;
     sops->sem_flg = 0;
 
     if (semop(sem_id, sops, 1) == -1) {
         if (errno == EINTR) {
-            unlock(id);
+            unlock();
         }
         else {
             syserr("nipote", "impossibile sbloccare il semaforo");
