@@ -8,7 +8,6 @@
 #include <sys/msg.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include <string.h>
 #ifdef THREADS
 #include <pthread.h>
 #endif

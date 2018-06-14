@@ -36,24 +36,19 @@ void padre(char *input_path, char *output_path) {
         int i;
         for (i = 0; i < n; i++, offset++) {
             if (buffer[i] == '>') {
-                i += offset + 2;
+                n_of_lines++;
+                i += offset + 5;
+                offset = 0;
                 if (i > n) {
                     lseek(input_fd, i - n + 1, SEEK_CUR);
                 }
-                else {
-                    offset = -1;
-                }
-            }
-            else if (buffer[i] == '\n') {
-                n_of_lines++;
-                offset = -1;
             }
         }
     }
     if(close(input_fd) == -1) {
         syserr("padre", "impossibile chiudere il file di input");
     }
-
+    
     // Crea, collega il segmento di memoria s1 e imposta il campo id_string dell'enum Status a 0
     void *s1 = attach_segments(SHKEY_S1, sizeof(struct Status) + (n_of_lines * sizeof(struct Entry)));
     struct Status *status = (struct Status *)s1;
