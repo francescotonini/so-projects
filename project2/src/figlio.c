@@ -36,23 +36,11 @@ void figlio(int lines, void *s1, unsigned *output) {
     fcntl(p[1], F_SETFL, O_NONBLOCK);
 
     // Crea due semafori. Il primo impostato a 1 mentre il secondo a 0
-    if ((sem_id = semget(SEM_KEY, 3, IPC_CREAT | IPC_EXCL | 0666)) < 0) {
+    if ((sem_id = semget(SEM_KEY, 1, IPC_CREAT | IPC_EXCL | 0666)) < 0) {
         syserr("figlio", "impossibile creare i semafori");
     }
     struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
     sops->sem_num = 0;
-    sops->sem_op = 1;
-    sops->sem_flg = 0;
-    if (semop(sem_id, sops, 1) == -1) {
-        syserr("figlio", "impossibile impostare il semaforo a 1");
-    }
-    sops->sem_num = 1;
-    sops->sem_op = 0;
-    sops->sem_flg = 0;
-    if (semop(sem_id, sops, 1) == -1) {
-        syserr("figlio", "impossibile impostare il semaforo a 0");
-    }
-    sops->sem_num = 2;
     sops->sem_op = 1;
     sops->sem_flg = 0;
     if (semop(sem_id, sops, 1) == -1) {
@@ -80,8 +68,7 @@ void figlio(int lines, void *s1, unsigned *output) {
         data[i].s1 = s1;
         data[i].lines = lines;
         data[i].output = output;
-        data[i].pipe[0] = p[0];
-        data[i].pipe[1] = p[1];
+        data[i].pipe = p[1];
 
         if (pthread_create(&threads[i], NULL, nipote, (void *)&data[i])) {
             syserr("figlio", "impossibile lanciare thread");
@@ -103,8 +90,7 @@ void figlio(int lines, void *s1, unsigned *output) {
         data[i].s1 = s1;
         data[i].lines = lines;
         data[i].output = output;
-        data[i].pipe[0] = p[0];
-        data[i].pipe[1] = p[1];
+        data[i].pipe = p[1];
 
         if ((forks[i] = fork()) == -1) {
             syserr("figlio", "impossibile creare processo nipote");
