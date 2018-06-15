@@ -11,11 +11,11 @@ MKDIR      := mkdir -p
 
 $(OBJ_DIR)%.o: $(SRC_DIR)%.c | $(OBJ_DIR)
 	@echo Compile $< -> $@
-	$(CC) $(THREADSFLAG) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@  $(THREADSFLAG) 
 
 $(PROJECT): $(OBJ)
 	@echo Linking $(PROJECT)
-	$(LD) $(THREADSFLAG) $(LDFLAGS) $(OBJ) -o $(OBJ_DIR)$(PROJECT)
+	$(LD) $(LDFLAGS) $(OBJ) -o $(OBJ_DIR)$(PROJECT) $(THREADSFLAG)
 
 all: $(PROJECT)
 
@@ -30,7 +30,7 @@ doc:
 	@echo "Generating doc"
 	doxygen doxygen.cfg
 
-threads: THREADSFLAG := -D THREADS -pthread
+threads: THREADSFLAG := -D THREADS -lpthread
 threads: all
 
 help:
