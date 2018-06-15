@@ -28,24 +28,19 @@ void figlio(int lines, void *s1, unsigned *output) {
     signal(SIGUSR1, status_updated);
 
     // Creo pipe
-    if (pipe(p) == -1) {
-        syserr("figlio", "impossibile creare pipe");
-    }
+    try_or_exit(pipe(p), "figlio", "impossibile creare pipe");
 
     fcntl(p[0], F_SETFL, O_NONBLOCK);
     fcntl(p[1], F_SETFL, O_NONBLOCK);
 
     // Crea un semaforo per accedere in modo esclusivo a status
-    if ((sem_id = semget(SEM_KEY, 1, IPC_CREAT | IPC_EXCL | 0666)) < 0) {
-        syserr("figlio", "impossibile creare i semafori");
-    }
+    try_or_exit((sem_id = semget(SEM_KEY, 1, IPC_CREAT | IPC_EXCL | 0666)), "figlio", "impossibile creare il semaforo");
+
     struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
     sops->sem_num = 0;
     sops->sem_op = 1;
     sops->sem_flg = 0;
-    if (semop(sem_id, sops, 1) == -1) {
-        syserr("figlio", "impossibile impostare il semaforo a 1");
-    }
+    try_or_exit(semop(sem_id, sops, 1), "figlio", "impossibile impostare il semaforo a 1");
 
     free(sops);
 
@@ -53,9 +48,7 @@ void figlio(int lines, void *s1, unsigned *output) {
 
     // Recupera coda logger
     int queue_id;
-    if((queue_id = msgget(QUEUE_KEY, (IPC_CREAT | 0666))) == -1) {
-        syserr("figlio", "impossibile accedere  alla coda");
-    }
+    try_or_exit((queue_id = msgget(QUEUE_KEY, (IPC_CREAT | 0666))), "figlio", "impossibile accedere alla coda");
 
     #ifdef THREADS
     
@@ -70,9 +63,7 @@ void figlio(int lines, void *s1, unsigned *output) {
         data[i].output = output;
         data[i].pipe = p[1];
 
-        if (pthread_create(&threads[i], NULL, nipote, (void *)&data[i])) {
-            syserr("figlio", "impossibile lanciare thread");
-        }
+        try_or_exit(pthread_create(&threads[i], NULL, nipote, (void *)&data[i]), "figlio", "impossibile lanciare thread");
     }
     
     for (i = 0; i < NUM_THREADS; i++) {
@@ -92,9 +83,7 @@ void figlio(int lines, void *s1, unsigned *output) {
         data[i].output = output;
         data[i].pipe = p[1];
 
-        if ((forks[i] = fork()) == -1) {
-            syserr("figlio", "impossibile creare processo nipote");
-        }
+        try_or_exit((forks[i] = fork()), "figlio", "impossibile creare processo padre");        
 
         if (forks[i] == 0) {
             nipote((void *)&data[i]);
@@ -108,12 +97,10 @@ void figlio(int lines, void *s1, unsigned *output) {
     #endif
 
     // Rimuove semafori
-    if (semctl(sem_id, 2, IPC_RMID) == -1) {
-        syserr("figlio", "impossibile rimuovere i semafori");
-    }
+    try_or_exit((semctl(sem_id, 1, IPC_RMID)), "figlio", "impossibile rimuovere il semaforo");
 
     send_terminate(queue_id);
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 void status_updated(int sig_num) {
@@ -123,6 +110,8 @@ void status_updated(int sig_num) {
         while((n = read(p[0], buffer, 512)) > 0) {
             write(STDOUT, buffer, n);
         }
+
+        try_or_exit(n, "figlio", "impossibile leggere dalla pipe");
     }
 }
 
@@ -132,7 +121,5 @@ void send_terminate(int queue_id) {
     strcp(end_message.text, "ricerca conclusa.");
 
     size_t size = sizeof(struct Message) - sizeof(long);
-    if (msgsnd(queue_id, &end_message, size, 0) == -1) {
-        syserr("figlio", "impossibile inviare messaggio di terminazione");
-    }
+    try_or_exit(msgsnd(queue_id, &end_message, size, 0), "figlio", "impossibile inviare messaggio di terminazione");
 }

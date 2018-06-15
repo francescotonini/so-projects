@@ -11,17 +11,33 @@
 #include <types.h>
 #include <constants.h>
 
+int s1_id;
+int s2_id;
+
 void padre(char *input_path, char *output_path) {
+    /*
+        * SIGINT  (Ctrl + C)
+        * SIGTERM
+        * SIGQUIT (Ctrl + \)
+        * SIGSEGV
+        * SIGPIPE
+        * SIGTSTP (Ctrl + Z)
+	*/
+    signal(SIGINT, signal_error_handler);
+	signal(SIGTERM, signal_error_handler);
+	signal(SIGQUIT, signal_error_handler);
+	signal(SIGSEGV, signal_error_handler);
+	signal(SIGPIPE, signal_error_handler);
+	signal(SIGTSTP, signal_error_handler);
+
     // Controlla che il file di output esista. Se così fosse, arresta il processo
     if (access(output_path, F_OK) == 0) {
         printerr("il file di output esiste");
-        exit(1);
+        try_or_exit(-1, "padre", "il figlio di output esiste");
     }
 
     // Controlla che il file di input esista. Se così NON fosse, arresta il processo
-    if (access(input_path, F_OK | R_OK) != 0) {
-        syserr("padre", "errore nell'accedere file di input");
-    }
+    try_or_exit(access(input_path, F_OK | R_OK), "padre", "impossibile accedere al file di input");
 
     // Apre il file di input per contare il numero di righe nel file; infine, chiude il file
     int input_fd;
@@ -29,9 +45,7 @@ void padre(char *input_path, char *output_path) {
     int n = 0;
     char buffer[BUFFER_SIZE];
     int offset = 0;
-    if((input_fd = open(input_path, O_RDONLY, 0644)) == -1) {
-        syserr("padre", "impossibile aprire il file di input");
-    }
+    try_or_exit((input_fd = open(input_path, O_RDONLY, 0644)), "padre", "impossibile aprire il file di input");
     while((n = read(input_fd, buffer, BUFFER_SIZE)) > 0) {
         int i;
         for (i = 0; i < n; i++, offset++) {
@@ -45,9 +59,7 @@ void padre(char *input_path, char *output_path) {
             }
         }
     }
-    if(close(input_fd) == -1) {
-        syserr("padre", "impossibile chiudere il file di input");
-    }
+    try_or_exit(close(input_fd), "padre", "impossibile chiudere il file di input");
     
     // Crea, collega il segmento di memoria s1 e imposta il campo id_string dell'enum Status a 0
     void *s1 = attach_segments(SHKEY_S1, sizeof(struct Status) + (n_of_lines * sizeof(struct Entry)));
@@ -98,8 +110,13 @@ void padre(char *input_path, char *output_path) {
 
 void *attach_segments(key_t key, size_t size) {
     int shmid;
-    if((shmid = shmget(key, size, 0600 | IPC_CREAT | IPC_EXCL)) < 0) {
-        syserr("padre", "errore shmget");
+    try_or_exit((shmid = shmget(key, size, 0600 | IPC_CREAT | IPC_EXCL)), "padre", "errore shmget");
+
+    if (key == SHKEY_S1) {
+        s1_id = shmid;
+    }
+    else if (key == SHKEY_S2) {
+        s2_id = shmid;
     }
 
     void *ptr;
@@ -112,15 +129,11 @@ void *attach_segments(key_t key, size_t size) {
 
 void detach_segments(key_t key, void *attached_segment) {
     int shmid;
-    if((shmid = shmget(key, 0, 0600)) < 0) {
-        syserr("padre", "errore shmget");
-    }
+    try_or_exit((shmid = shmget(key, 0, 0600)), "padre", "errore shmget");
 
     shmdt(attached_segment);
     
-    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
-        syserr("padre", "errore shmctl");
-    }
+    try_or_exit((shmctl(shmid, IPC_RMID, NULL)), "padre", "errore shmctl");
 }
 
 void load_file(char *name, void *ptr) {
@@ -140,9 +153,7 @@ void load_file(char *name, void *ptr) {
 
     // Apre il file di input
     int fd;
-    if((fd = open(name, O_RDONLY, 0644)) == -1) {
-        syserr("padre", "impossibile creare il file di input");
-    }
+    try_or_exit((fd = open(name, O_RDONLY, 0644)), "padre", "impossibile creare il file di input");
 
     // Indica il numero di byte letti nella "read" corrente
     int n;
@@ -203,18 +214,18 @@ void load_file(char *name, void *ptr) {
         }
     }
 
-    // Chiude il file di input
-    if(close(fd) == -1) {
-        syserr("padre", "impossibile chiudere il file di input");
+    if (n == -1) {
+        try_or_exit(-1, "padre", "errore durante la lettura del file di input");
     }
+
+    // Chiude il file di input
+    try_or_exit(close(fd), "padre", "impossibile chiudere il file di input");
 }
 
 void save_keys(char *name, unsigned *keys, int n_of_lines) {
     // Crea e apre il file di output
     int fd;
-    if((fd = creat(name, O_RDWR | 0644)) == -1) {
-        syserr("padre", "impossibile creare il file di output");
-    }
+    try_or_exit((fd = creat(name, O_RDWR | 0644)), "padre", "impossibile creare il file di input");
 
     int i;
     for (i = 0; i < n_of_lines; i++) {
@@ -229,9 +240,7 @@ void save_keys(char *name, unsigned *keys, int n_of_lines) {
     }
     
     // Chiude il file di output
-    if(close(fd) == -1) {
-        syserr("padre", "impossibile chiudere il file di output");
-    }
+    try_or_exit(close(fd), "padre", "impossibile chiudere il file di output");
 }
 
 void check_keys(struct Entry *input, unsigned *output, int n_of_lines) {

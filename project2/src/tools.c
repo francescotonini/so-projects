@@ -2,6 +2,15 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/shm.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+#include <sys/msg.h>
+#include <signal.h>
+#include <errno.h>
+#ifdef THREADS
+#include <pthread.h>
+#endif
 #include <tools.h>
 #include <constants.h>
 
@@ -13,7 +22,6 @@ void syserr(char *prog, char *msg)
     write(STDERR, error, strsize(error));
     write(STDERR, msg, strsize(msg));
     perror("system error");
-    exit(1);
 }
 
 void println(char *str) {
@@ -101,4 +109,29 @@ char *utoh(unsigned value) {
     }
 
     return new_string;
+}
+
+void try_or_exit(int return_value, char *prog, char *message) {
+    if (return_value == -1) {
+        if (errno == EAGAIN) {
+            return;
+        }
+
+        syserr(prog, message);
+        // Invio segnale di arresto a tutti i processi
+        kill(0, SIGINT);
+    }
+}
+
+void clean_and_exit() {
+    // Rimozione risorse condivise
+    shmctl(s1_id, IPC_RMID, NULL);
+	shmctl(s2_id, IPC_RMID, NULL);
+	msgctl(queue_id, IPC_RMID, NULL);
+	semctl(sem_id, 1, IPC_RMID, NULL);
+}
+
+void signal_error_handler(int sig_num) {
+    clean_and_exit();
+    exit(EXIT_FAILURE);
 }

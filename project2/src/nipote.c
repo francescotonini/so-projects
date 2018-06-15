@@ -23,17 +23,13 @@ void *nipote(void *ptr) {
     struct NephewData *data = (struct NephewData *)ptr;
 
     // Get semaphore
-    if ((sem_id = semget(SEM_KEY, 1, 0666)) == -1) {
-        syserr("nipote", "impossibile recuperare semaforo");
-    }
+    try_or_exit((sem_id = semget(SEM_KEY, 1, 0666)), "nipote", "impossibile recuperare semaforo");
 
     status = (struct Status *)data->s1;
     struct Entry *input = (struct Entry *)(data->s1 + sizeof(struct Status));
 
     // Get logger queue
-    if((queue_id = msgget(QUEUE_KEY, 0666)) == -1) {
-        syserr("nipote", "impossibile accedere alla coda");
-    }
+    try_or_exit((queue_id = msgget(QUEUE_KEY, 0666)), "nipote", "impossibile accedere alla coda");
 
     int lines = data->lines;
     int my_string = 0;
@@ -61,13 +57,13 @@ void *nipote(void *ptr) {
             free(str4);
             free(idString);
 
+            unlock();
+
             #ifdef THREADS
             kill(getpid(), SIGUSR1);
             #else
             kill(getppid(), SIGUSR1);
             #endif
-
-            unlock();
 
             struct Entry *this_entry = load_string(my_string, input);
             unsigned key = find_key(this_entry);
@@ -79,9 +75,9 @@ void *nipote(void *ptr) {
     }
 
     #ifdef THREADS
-    pthread_exit(0);
+    pthread_exit(EXIT_SUCCESS);
     #else
-    exit(0);
+    exit(EXIT_SUCCESS);
     #endif
 }
 
@@ -95,14 +91,7 @@ void lock() {
     sops->sem_op = -1;
     sops->sem_flg = 0;
 
-    if (semop(sem_id, sops, 1) == -1) {
-        if (errno == EINTR) {
-            lock();
-        }
-        else {
-            syserr("nipote", "impossibile bloccare il semaforo");
-        }
-    }
+    try_or_exit(semop(sem_id, sops, 1), "nipote", "impossibile bloccare il semaforo");
 
     free(sops);
 }
@@ -113,14 +102,7 @@ void unlock() {
     sops->sem_op = 1;
     sops->sem_flg = 0;
 
-    if (semop(sem_id, sops, 1) == -1) {
-        if (errno == EINTR) {
-            unlock();
-        }
-        else {
-            syserr("nipote", "impossibile sbloccare il semaforo");
-        }
-    }
+    try_or_exit(semop(sem_id, sops, 1), "nipote", "impossibile sbloccare il semaforo");
 
     free(sops);
 }
@@ -155,9 +137,7 @@ void send_timeelapsed(time_t time) {
     strcp(end_message.text, concat);
 
     size_t size = sizeof(struct Message) - sizeof(long);
-    if (msgsnd(queue_id, &end_message, size, 0) == -1) {
-        syserr("nipote", "impossibile inviare messaggio");
-    }
+    try_or_exit(msgsnd(queue_id, &end_message, size, 0), "nipote", "impossibile inviare messaggio");
 
     free(timeToString);
     free(concat);

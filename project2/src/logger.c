@@ -22,9 +22,7 @@ void catch_alarm(int sig_num) {
 void logger() {
     signal(SIGALRM, catch_alarm);
 
-    if((queue_id = msgget(QUEUE_KEY, (IPC_CREAT | 0666))) == -1) {
-        syserr("logger", "impossibile creare la coda");
-    }
+    try_or_exit((queue_id = msgget(QUEUE_KEY, (IPC_CREAT | 0666))), "logger", "impossibile creare coda");
 
     while(polling_receive() != 1) {
         alarm(1);
@@ -32,11 +30,9 @@ void logger() {
         alarm(0);
     }
 
-    if (msgctl(queue_id, IPC_RMID, NULL) == -1) {
-        syserr("logger", "impossibile cancellare la coda");
-    }
+    try_or_exit(msgctl(queue_id, IPC_RMID, NULL), "logger", "impossibile cancellare la coda");
 
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 int polling_receive() {

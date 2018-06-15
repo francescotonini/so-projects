@@ -56,4 +56,10 @@ void strcp(char *str1, char *str2);
  */
 char *utoh(unsigned value);
 
+void try_or_exit(int retValue, char *prog, char *message);
+
+void clean_and_exit();
+
+void signal_error_handler(int sig_num);
+
 /// @}

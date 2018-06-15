@@ -65,4 +65,9 @@
 #endif
 #endif
 
+extern int s1_id;
+extern int s2_id;
+extern int queue_id;
+extern int sem_id;
+
 /// @}
