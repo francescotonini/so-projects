@@ -56,10 +56,24 @@ void strcp(char *str1, char *str2);
  */
 char *utoh(unsigned value);
 
+/**
+ * @brief controlla che la system call sia andata a buon fine, in caso contrario arresta il programma
+ * @param retValue valore di ritorno system call
+ * @param prog nome processo
+ * @param message messaggio
+ */
 void try_or_exit(int retValue, char *prog, char *message);
 
+/**
+ * @brief rimuove tutte le risorse condivise se non sono state rimosse dai processi prima di uscire
+ */
 void clean_and_exit();
 
+/**
+ * @brief intercetta segnali di arresto e richiama clean_and_exit per pulire le risorse prima di uscire
+ * @param sig_num tipo segnale
+ */
 void signal_error_handler(int sig_num);
+
 
 /// @}
