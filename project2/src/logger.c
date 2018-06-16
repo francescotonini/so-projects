@@ -40,7 +40,8 @@ int polling_receive() {
     struct Message message;
 
     size_t size = sizeof(struct Message) - sizeof(long);
-    while (msgrcv(queue_id, &message, size, 0, IPC_NOWAIT) > 0) {
+    int bytes_read;
+    while ((bytes_read = msgrcv(queue_id, &message, size, 0, IPC_NOWAIT)) > 0) {
         if (message.mtype == 1) {
             result = 1;
         }
@@ -52,6 +53,10 @@ int polling_receive() {
 
         println(message.text);
     };
+
+    if (bytes_read == -1 && errno != ENOMSG) {
+        try_or_exit(bytes_read, "logger", "impossibile leggere dalla coda");
+    }
 
     return result;
 }

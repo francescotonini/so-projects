@@ -22,28 +22,37 @@
 struct Status *status;
 int sem_id;
 int p[2];
+pid_t padre_pid;
 
 void figlio(int lines, void *s1, unsigned *output) {
-    // Collego segnale
+    padre_pid = getppid();
+    
+    // Collego segnale SIGUSR1 e SIGALRM
+    // SIGUSR1: segnale inviato da nipote per informare il figlio della variazione di status
     signal(SIGUSR1, status_updated);
+    // SIGALRM: segnale inviato da figlio stesso quando il timer di 1 secondo è scaduto. Il timer è necessario per controllare l'esistenza del padre
+    signal(SIGALRM, status_updated);
 
-    // Creo pipe
+    // Avvio timer di controllo del processo padre
+    alarm(1);
+
+    // Creo pipe e imposto entrambi i descrittori come non bloccanti
     try_or_exit(pipe(p), "figlio", "impossibile creare pipe");
-
     fcntl(p[0], F_SETFL, O_NONBLOCK);
     fcntl(p[1], F_SETFL, O_NONBLOCK);
 
     // Crea un semaforo per accedere in modo esclusivo a status
     try_or_exit((sem_id = semget(SEM_KEY, 1, IPC_CREAT | IPC_EXCL | 0666)), "figlio", "impossibile creare il semaforo");
 
+    // Imposto il semaforo a 1 (primo accesso consentito)
     struct sembuf *sops = (struct sembuf *)malloc(sizeof(struct sembuf));
     sops->sem_num = 0;
     sops->sem_op = 1;
     sops->sem_flg = 0;
     try_or_exit(semop(sem_id, sops, 1), "figlio", "impossibile impostare il semaforo a 1");
-
     free(sops);
 
+    // Cast della sezione di memoria condivisa alla struttura Status
     status = (struct Status *)s1;
 
     // Recupera coda logger
@@ -112,6 +121,10 @@ void status_updated(int sig_num) {
         }
 
         try_or_exit(n, "figlio", "impossibile leggere dalla pipe");
+    }
+    else if (sig_num == SIGALRM) {
+        try_or_exit(kill(padre_pid, 0), "figlio", "il padre è terminato inaspettatamente");
+        alarm(1);
     }
 }
 

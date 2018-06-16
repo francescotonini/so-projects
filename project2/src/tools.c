@@ -7,10 +7,6 @@
 #include <sys/sem.h>
 #include <sys/msg.h>
 #include <signal.h>
-#include <errno.h>
-#ifdef THREADS
-#include <pthread.h>
-#endif
 #include <tools.h>
 #include <constants.h>
 
@@ -18,24 +14,21 @@ void syserr(char *prog, char *msg)
 {
     char *error = " error: ";
 
-    write(STDERR, prog, strsize(prog));
-    write(STDERR, error, strsize(error));
-    write(STDERR, msg, strsize(msg));
+    try_or_exit(write(STDERR, prog, strsize(prog)), "tools", "impossibile scrivere su STDERR");
+    try_or_exit(write(STDERR, error, strsize(error)), "tools", "impossibile scrivere su STDERR");
+    try_or_exit(write(STDERR, msg, strsize(msg)), "tools", "impossibile scrivere su STDERR");
     perror("system error");
 }
 
 void println(char *str) {
     char *strWithNewline = strcct(str, "\n");
-    if (write(STDOUT, strWithNewline, strsize(strWithNewline)) == -1) {
-        syserr("tools.c", "write");
-    }
-
+    try_or_exit(write(STDOUT, strWithNewline, strsize(strWithNewline)), "tools", "impossibile scrivere su STDOUT");
     free(strWithNewline);
 }
 
 void printerr(char *str) {
     char *strWithNewline = strcct(str, "\n");
-    write(STDERR, strWithNewline, strsize(strWithNewline));
+    try_or_exit(write(STDERR, strWithNewline, strsize(strWithNewline)), "tools", "impossibile scrivere su STDERR");
 
     free(strWithNewline);
 }
@@ -113,6 +106,7 @@ char *utoh(unsigned value) {
 
 void try_or_exit(int return_value, char *prog, char *message) {
     if (return_value == -1) {
+        // Controllo se l'errore ricevuto è legato all'assenza di dati su pipe/coda. Nel nostro caso tale errore è da considerarsi come un "non errore"
         if (errno == EAGAIN) {
             return;
         }
