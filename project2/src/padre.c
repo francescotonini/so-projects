@@ -33,7 +33,7 @@ void padre(char *input_path, char *output_path) {
     // Controlla che il file di output esista. Se così fosse, arresta il processo
     if (access(output_path, F_OK) == 0) {
         printerr("il file di output esiste");
-        try_or_exit(-1, "padre", "il figlio di output esiste");
+        try_or_exit(-1, "padre", "il file di output esiste");
     }
 
     // Controlla che il file di input esista. Se così NON fosse, arresta il processo
@@ -54,11 +54,12 @@ void padre(char *input_path, char *output_path) {
                 i += offset + 5;
                 offset = 0;
                 if (i > n) {
-                    lseek(input_fd, i - n + 1, SEEK_CUR);
+                    try_or_exit(lseek(input_fd, i - n + 1, SEEK_CUR), "padre", "errore durante lo spostamento nel file");
                 }
             }
         }
     }
+    try_or_exit(n, "padre", "impossibile leggere dal file di input");
     try_or_exit(close(input_fd), "padre", "impossibile chiudere il file di input");
     
     // Crea, collega il segmento di memoria s1 e imposta il campo id_string dell'enum Status a 0
@@ -76,19 +77,15 @@ void padre(char *input_path, char *output_path) {
 
     // Crea logger
     pid_t pid_logger;
-    if ((pid_logger = fork()) == -1) {
-        syserr("padre", "impossibile creare logger");
-    }
-    else if (pid_logger == 0) {
+    try_or_exit((pid_logger = fork()), "padre", "impossibile creare logger");
+    if (pid_logger == 0) {
         logger();
     }
 
     // Crea figlio
     pid_t pid_figlio;
-    if ((pid_figlio = fork()) == -1) {
-        syserr("padre", "impossibile creare figlio");
-    }
-    else if (pid_figlio == 0) {
+    try_or_exit((pid_figlio = fork()), "padre", "impossibile creare figlio");
+    if (pid_figlio == 0) {
         figlio(n_of_lines, s1, output);
     }
 
@@ -168,7 +165,7 @@ void load_file(char *name, void *ptr) {
     int current_entry_status = 0;
 
     // Salto il primo carattere (non utile ai fini del caricamento nel file)
-    lseek(fd, current_pos, SEEK_SET);
+    try_or_exit(lseek(fd, current_pos, SEEK_SET), "padre", "errore nello spostamento sul file");
     while ((n = read(fd, buffer, BUFFER_SIZE)) > 0) {
         if (current_entry_status == 0) {
             // Copia il buffer all'interno del campo "clear" della struttura Entry
@@ -190,7 +187,7 @@ void load_file(char *name, void *ptr) {
                     current_pos += 3;
                 }
             }
-            lseek(fd, current_pos, SEEK_SET);
+            try_or_exit(lseek(fd, current_pos, SEEK_SET), "padre", "errore nello spostamento sul file");
 
             // La prossima lettura riguarderà la parte cifrata della riga, modifico la variabile di conseguenza
             current_entry_status = 1;
@@ -204,7 +201,7 @@ void load_file(char *name, void *ptr) {
 
             // Salto alla prima posizione della prossima riga da analizzare (se esiste)
             current_pos += (current_entry->size * 4 + 3);
-            lseek(fd, current_pos, SEEK_SET);
+            try_or_exit(lseek(fd, current_pos, SEEK_SET), "padre", "errore nello spostamento sul file");
 
             // La lettura per la riga attuale è terminata, modifico il puntatore alla zona di memoria condivisa affinché passi alla prossima riga
             current_entry++;
@@ -214,9 +211,7 @@ void load_file(char *name, void *ptr) {
         }
     }
 
-    if (n == -1) {
-        try_or_exit(-1, "padre", "errore durante la lettura del file di input");
-    }
+    try_or_exit(n, "padre", "errore durante la lettura del file di input");
 
     // Chiude il file di input
     try_or_exit(close(fd), "padre", "impossibile chiudere il file di input");
@@ -232,9 +227,9 @@ void save_keys(char *name, unsigned *keys, int n_of_lines) {
         unsigned *this = (keys + i);
         char *converted = utoh(*this);
 
-        write(fd, "0x", 2);
-        write(fd, converted, 8);
-        write(fd, "\r\n", 2);
+        try_or_exit(write(fd, "0x", 2), "padre", "impossibile scrivere sul file");
+        try_or_exit(write(fd, converted, 8), "padre", "impossibile scrivere sul file");
+        try_or_exit(write(fd, "\r\n", 2), "padre", "impossibile scrivere sul padre");
 
         free(converted);
     }
