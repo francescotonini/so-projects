@@ -57,13 +57,13 @@ void *nipote(void *ptr) {
             free(str4);
             free(idString);
 
-            unlock();
-
             #ifdef THREADS
             kill(getpid(), SIGUSR1);
             #else
             kill(getppid(), SIGUSR1);
             #endif
+
+            unlock();
 
             struct Entry *this_entry = load_string(my_string, input);
             unsigned key = find_key(this_entry);
