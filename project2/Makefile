@@ -34,11 +34,11 @@ threads: THREADSFLAG := -D THREADS -lpthread
 threads: all
 
 help:
-	@echo all: compila il codice sorgente
-	@echo install: copia l'eseguibile su /bin
-	@echo doc: genera la documentazione
-	@echo threads: compila il codice usando le threads
-	@echo clean: rimuove i file temporanei di compilazione
+	@echo "all: compila il codice sorgente"
+	@echo "install: copia l'eseguibile su /bin"
+	@echo "doc: genera la documentazione"
+	@echo "threads: compila il codice usando le threads"
+	@echo "clean: rimuove i file temporanei di compilazione"
 
 clean:
 	@echo Clean
